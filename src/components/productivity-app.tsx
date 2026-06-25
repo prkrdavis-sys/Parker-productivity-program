@@ -115,13 +115,176 @@ type GoalRecommendation = {
   xpValue: number;
 };
 
-const goalSuggestions: GoalSuggestion[] = demoTasks.map((task) => ({
-  title: task.title,
-  notes: task.notes ?? "",
-  categoryId: task.category_id ?? initialTaskInput.category_id,
-  priority: task.priority,
-  xpValue: task.xp_value,
-}));
+const goalSuggestions: GoalSuggestion[] = [
+  ...demoTasks.map((task) => ({
+    title: task.title,
+    notes: task.notes ?? "",
+    categoryId: task.category_id ?? initialTaskInput.category_id,
+    priority: task.priority,
+    xpValue: task.xp_value,
+  })),
+  {
+    title: "Do a 20-minute room reset",
+    notes: "Pick one room, clear surfaces, and put loose items back where they belong.",
+    categoryId: "home-base",
+    priority: "medium",
+    xpValue: 35,
+  },
+  {
+    title: "Run one load of laundry start to finish",
+    notes: "Wash, dry, fold, and put it away before it becomes another open loop.",
+    categoryId: "home-base",
+    priority: "medium",
+    xpValue: 35,
+  },
+  {
+    title: "Take out trash and reset entryway",
+    notes: "Clear the obvious clutter and make the first step into the home feel clean.",
+    categoryId: "home-base",
+    priority: "low",
+    xpValue: 25,
+  },
+  {
+    title: "Plan tomorrow's top three missions",
+    notes: "Choose the three wins that would make tomorrow feel controlled.",
+    categoryId: "command-center",
+    priority: "medium",
+    xpValue: 30,
+  },
+  {
+    title: "Clear email and inbox for 15 minutes",
+    notes: "Delete noise, reply where needed, and capture anything that needs a real task.",
+    categoryId: "command-center",
+    priority: "medium",
+    xpValue: 30,
+  },
+  {
+    title: "Review budget and upcoming bills",
+    notes: "Check balances, due dates, and anything that needs action this week.",
+    categoryId: "command-center",
+    priority: "critical",
+    xpValue: 80,
+  },
+  {
+    title: "Block calendar for focused work",
+    notes: "Protect a work block and remove one avoidable schedule conflict.",
+    categoryId: "command-center",
+    priority: "high",
+    xpValue: 55,
+  },
+  {
+    title: "Apply to one strong opportunity",
+    notes: "Send one thoughtful application, message, or follow-up that can create momentum.",
+    categoryId: "career-forge",
+    priority: "high",
+    xpValue: 65,
+  },
+  {
+    title: "Improve one resume bullet",
+    notes: "Make one bullet more concrete, measurable, and outcome-focused.",
+    categoryId: "career-forge",
+    priority: "medium",
+    xpValue: 35,
+  },
+  {
+    title: "Write a short portfolio case-study note",
+    notes: "Capture the problem, what you built, and the result in one tight pass.",
+    categoryId: "career-forge",
+    priority: "high",
+    xpValue: 60,
+  },
+  {
+    title: "Fix one annoying project bug",
+    notes: "Choose one bug, reproduce it, and ship the smallest clean fix.",
+    categoryId: "career-forge",
+    priority: "high",
+    xpValue: 65,
+  },
+  {
+    title: "Do a 30-minute learning sprint",
+    notes: "Study one focused topic and write down the useful takeaway.",
+    categoryId: "skills",
+    priority: "medium",
+    xpValue: 35,
+  },
+  {
+    title: "Practice one hard skill drill",
+    notes: "Repeat one exercise deliberately until the weak spot is clearer.",
+    categoryId: "skills",
+    priority: "medium",
+    xpValue: 40,
+  },
+  {
+    title: "Read ten pages and capture one insight",
+    notes: "Keep it simple: read, underline the useful idea, and write one sentence.",
+    categoryId: "skills",
+    priority: "low",
+    xpValue: 25,
+  },
+  {
+    title: "Train for 30 minutes",
+    notes: "Complete a basic strength, cardio, or mixed session.",
+    categoryId: "body",
+    priority: "high",
+    xpValue: 60,
+  },
+  {
+    title: "Take a recovery walk",
+    notes: "Get outside or move gently long enough to reset energy.",
+    categoryId: "body",
+    priority: "medium",
+    xpValue: 30,
+  },
+  {
+    title: "Prep one healthy meal",
+    notes: "Make one meal that supports the rest of the day instead of draining it.",
+    categoryId: "body",
+    priority: "medium",
+    xpValue: 35,
+  },
+  {
+    title: "Start bedtime shutdown routine",
+    notes: "Set up tomorrow, reduce screens, and give the body a real off-ramp.",
+    categoryId: "body",
+    priority: "medium",
+    xpValue: 35,
+  },
+  {
+    title: "Send one important check-in message",
+    notes: "Reach out to someone who matters with a real note, not a placeholder.",
+    categoryId: "personal",
+    priority: "medium",
+    xpValue: 30,
+  },
+  {
+    title: "Book or confirm one appointment",
+    notes: "Close the scheduling loop and put the appointment on the calendar.",
+    categoryId: "personal",
+    priority: "medium",
+    xpValue: 35,
+  },
+  {
+    title: "Handle one lingering errand",
+    notes: "Pick the errand that has been taking up mental space and finish it.",
+    categoryId: "personal",
+    priority: "medium",
+    xpValue: 35,
+  },
+  {
+    title: "Do one deliberate rest block",
+    notes: "Take a real recovery block without turning it into another obligation.",
+    categoryId: "personal",
+    priority: "low",
+    xpValue: 20,
+  },
+  {
+    title: "Close the most overdue loop",
+    notes: "Find the task creating the most pressure and finish the smallest honest version.",
+    categoryId: "command-center",
+    priority: "critical",
+    xpValue: 85,
+  },
+];
 
 const priorityXp: Record<Priority, number> = {
   low: 20,
@@ -288,9 +451,9 @@ const glossaryTerms = [
     definition: "The whole productivity journey: small victories, recurring rituals, earned progress, and patient advancement.",
   },
   {
-    term: "Demo Mode",
+    term: "Local Profiles",
     kind: "Account state",
-    definition: "The preview state when Supabase is not bound or no one is signed in. The realm works locally for exploration.",
+    definition: "The offline profile state when Supabase is not bound or no one is signed in. Profiles can be added and switched locally.",
   },
   {
     term: "Live Sync",
@@ -395,28 +558,145 @@ type Celebration = {
   tone: "gold" | "ember" | "crown";
 };
 
+type LocalWorkspace = {
+  profile: Profile;
+  tasks: Task[];
+  habits: Habit[];
+  completions: TaskCompletion[];
+  xpEvents: XpEvent[];
+  userAchievements: UserAchievement[];
+};
+
+const localWorkspaceStorageKey = "parker-productivity-program.local-workspaces.v1";
+
+const initialLocalWorkspace: LocalWorkspace = {
+  profile: demoProfile,
+  tasks: demoTasks,
+  habits: demoHabits,
+  completions: demoCompletions,
+  xpEvents: demoXpEvents,
+  userAchievements: [],
+};
+
+function getProfileInitials(displayName: string) {
+  const initials = displayName
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  return initials || "P";
+}
+
+function createLocalWorkspace(displayName: string): LocalWorkspace {
+  const name = displayName.trim() || "New Profile";
+  const id = `local-${crypto.randomUUID()}`;
+
+  return {
+    profile: {
+      id,
+      display_name: name,
+      avatar_initials: getProfileInitials(name),
+      total_xp: 0,
+      level: 1,
+      current_streak: 0,
+      longest_streak: 0,
+    },
+    tasks: [],
+    habits: [],
+    completions: [],
+    xpEvents: [],
+    userAchievements: [],
+  };
+}
+
+function readLocalWorkspaceState(): { activeProfileId: string; workspaces: LocalWorkspace[] } {
+  if (typeof window === "undefined") {
+    return { activeProfileId: demoProfile.id, workspaces: [initialLocalWorkspace] };
+  }
+
+  try {
+    const stored = window.localStorage.getItem(localWorkspaceStorageKey);
+    if (!stored) {
+      return { activeProfileId: demoProfile.id, workspaces: [initialLocalWorkspace] };
+    }
+
+    const parsed = JSON.parse(stored) as { activeProfileId?: string; workspaces?: LocalWorkspace[] };
+    const workspaces = parsed.workspaces?.filter((workspace) => workspace.profile?.id) ?? [];
+    if (workspaces.length === 0) {
+      return { activeProfileId: demoProfile.id, workspaces: [initialLocalWorkspace] };
+    }
+
+    const storedActiveProfileId = parsed.activeProfileId;
+    const activeProfileId =
+      storedActiveProfileId && workspaces.some((workspace) => workspace.profile.id === storedActiveProfileId)
+      ? storedActiveProfileId
+      : workspaces[0].profile.id;
+
+    return { activeProfileId, workspaces };
+  } catch {
+    return { activeProfileId: demoProfile.id, workspaces: [initialLocalWorkspace] };
+  }
+}
+
 export function ProductivityApp() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const [localWorkspaceState, setLocalWorkspaceState] = useState(() => readLocalWorkspaceState());
+  const activeLocalWorkspace =
+    localWorkspaceState.workspaces.find((workspace) => workspace.profile.id === localWorkspaceState.activeProfileId) ??
+    localWorkspaceState.workspaces[0] ??
+    initialLocalWorkspace;
   const [session, setSession] = useState<Session | null>(null);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [profile, setProfile] = useState<Profile>(demoProfile);
+  const [profile, setProfile] = useState<Profile>(activeLocalWorkspace.profile);
   const [categories, setCategories] = useState<TaskCategory[]>(defaultCategories);
-  const [tasks, setTasks] = useState<Task[]>(demoTasks);
-  const [habits, setHabits] = useState<Habit[]>(demoHabits);
-  const [completions, setCompletions] = useState<TaskCompletion[]>(demoCompletions);
-  const [xpEvents, setXpEvents] = useState<XpEvent[]>(demoXpEvents);
+  const [tasks, setTasks] = useState<Task[]>(activeLocalWorkspace.tasks);
+  const [habits, setHabits] = useState<Habit[]>(activeLocalWorkspace.habits);
+  const [completions, setCompletions] = useState<TaskCompletion[]>(activeLocalWorkspace.completions);
+  const [xpEvents, setXpEvents] = useState<XpEvent[]>(activeLocalWorkspace.xpEvents);
   const [achievements, setAchievements] = useState<Achievement[]>(defaultAchievements);
-  const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([]);
+  const [userAchievements, setUserAchievements] = useState<UserAchievement[]>(activeLocalWorkspace.userAchievements);
   const [taskInput, setTaskInput] = useState<NewTaskInput>(initialTaskInput);
   const [habitInput, setHabitInput] = useState<NewHabitInput>(initialHabitInput);
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState("Demo mode is active until the realm is bound to Supabase.");
+  const [message, setMessage] = useState("Local profiles are active until the realm is bound to Supabase.");
   const [celebration, setCelebration] = useState<Celebration | null>(null);
   const [confirmingTaskId, setConfirmingTaskId] = useState<string | null>(null);
+  const [newProfileName, setNewProfileName] = useState("");
 
-  const isDemoMode = !supabase || !session;
+  const isLocalMode = !supabase || !session;
+  const activeUserId = session?.user.id ?? profile.id;
+  const activeLocalProfileId = localWorkspaceState.activeProfileId;
+  const localWorkspaces = localWorkspaceState.workspaces;
+
+  function currentLocalWorkspace(): LocalWorkspace {
+    return {
+      profile,
+      tasks,
+      habits,
+      completions,
+      xpEvents,
+      userAchievements,
+    };
+  }
+
+  function applyLocalWorkspace(workspace: LocalWorkspace) {
+    setProfile(workspace.profile);
+    setTasks(workspace.tasks);
+    setHabits(workspace.habits);
+    setCompletions(workspace.completions);
+    setXpEvents(workspace.xpEvents);
+    setUserAchievements(workspace.userAchievements);
+    setCategories(defaultCategories);
+    setAchievements(defaultAchievements);
+    setTaskInput({ ...initialTaskInput, category_id: defaultCategories[0]?.id ?? initialTaskInput.category_id });
+    setHabitInput({ ...initialHabitInput, category_id: defaultCategories[0]?.id ?? initialHabitInput.category_id });
+    setConfirmingTaskId(null);
+  }
 
   const triggerCelebration = useCallback((title: string, subtitle: string, tone: Celebration["tone"]) => {
     setCelebration({ id: Date.now(), title, subtitle, tone });
@@ -429,6 +709,34 @@ export function ProductivityApp() {
     const timeout = window.setTimeout(() => setCelebration(null), 1900);
     return () => window.clearTimeout(timeout);
   }, [celebration]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (!isLocalMode) {
+      return;
+    }
+
+    const nextLocalWorkspaceState = {
+      ...localWorkspaceState,
+      workspaces: localWorkspaceState.workspaces.map((workspace) =>
+        workspace.profile.id === localWorkspaceState.activeProfileId
+          ? {
+              profile,
+              tasks,
+              habits,
+              completions,
+              xpEvents,
+              userAchievements,
+            }
+          : workspace,
+      ),
+    };
+
+    window.localStorage.setItem(localWorkspaceStorageKey, JSON.stringify(nextLocalWorkspaceState));
+  }, [completions, habits, isLocalMode, localWorkspaceState, profile, tasks, userAchievements, xpEvents]);
 
   useEffect(() => {
     if (!supabase) {
@@ -576,7 +884,7 @@ export function ProductivityApp() {
 
   async function handleAuth() {
     if (!supabase) {
-      setMessage("Bind Supabase env vars to enter. Demo mode is active right now.");
+      setMessage("Bind Supabase env vars to enter live sync. Local profiles are active right now.");
       return;
     }
 
@@ -606,7 +914,57 @@ export function ProductivityApp() {
 
     await supabase.auth.signOut();
     setSession(null);
-    setMessage("Signed out. Demo mode is active.");
+    applyLocalWorkspace(activeLocalWorkspace);
+    setMessage("Signed out. Local profiles are active.");
+  }
+
+  function switchLocalProfile(profileId: string) {
+    if (!isLocalMode) {
+      setMessage("Sign out to switch local profiles.");
+      return;
+    }
+
+    const nextWorkspace = localWorkspaces.find((workspace) => workspace.profile.id === profileId);
+    if (!nextWorkspace || profileId === activeLocalProfileId) {
+      return;
+    }
+
+    setLocalWorkspaceState((current) => ({
+      activeProfileId: profileId,
+      workspaces: current.workspaces.map((workspace) =>
+        workspace.profile.id === current.activeProfileId ? currentLocalWorkspace() : workspace,
+      ),
+    }));
+    applyLocalWorkspace(nextWorkspace);
+    setMessage(`${nextWorkspace.profile.display_name} is active.`);
+  }
+
+  function addLocalProfile() {
+    if (!isLocalMode) {
+      setMessage("Sign out to add a local profile.");
+      return;
+    }
+
+    const name = newProfileName.trim();
+    if (!name) {
+      setMessage("Name the new profile before adding it.");
+      return;
+    }
+
+    const nextWorkspace = createLocalWorkspace(name);
+
+    setLocalWorkspaceState((current) => ({
+      activeProfileId: nextWorkspace.profile.id,
+      workspaces: [
+        ...current.workspaces.map((workspace) =>
+          workspace.profile.id === current.activeProfileId ? currentLocalWorkspace() : workspace,
+        ),
+        nextWorkspace,
+      ],
+    }));
+    applyLocalWorkspace(nextWorkspace);
+    setNewProfileName("");
+    setMessage(`${name} added. You can switch profiles from the top bar.`);
   }
 
   async function addTask() {
@@ -621,7 +979,7 @@ export function ProductivityApp() {
 
     const nextTask: Task = {
       id: crypto.randomUUID(),
-      user_id: session?.user.id ?? "demo-user",
+      user_id: activeUserId,
       category_id: selectedCategory || null,
       title: taskInput.title.trim(),
       notes: taskInput.notes.trim() || null,
@@ -659,7 +1017,7 @@ export function ProductivityApp() {
 
     const nextHabit: Habit = {
       id: crypto.randomUUID(),
-      user_id: session?.user.id ?? "demo-user",
+      user_id: activeUserId,
       category_id: selectedCategory || null,
       title: habitInput.title.trim(),
       cadence: habitInput.cadence,
@@ -882,7 +1240,7 @@ export function ProductivityApp() {
   }): TaskCompletion {
     return {
       id: crypto.randomUUID(),
-      user_id: session?.user.id ?? "demo-user",
+      user_id: activeUserId,
       task_id: taskId,
       habit_id: habitId,
       completed_at: new Date().toISOString(),
@@ -903,7 +1261,7 @@ export function ProductivityApp() {
   }): XpEvent {
     return {
       id: crypto.randomUUID(),
-      user_id: session?.user.id ?? "demo-user",
+      user_id: activeUserId,
       source_type: sourceType,
       source_id: sourceId,
       points,
@@ -979,7 +1337,7 @@ export function ProductivityApp() {
   }
 
   return (
-    <main className="relative min-h-[100dvh] parchment-bg text-[var(--foreground)]">
+    <main className="relative min-h-[100dvh] overflow-x-clip parchment-bg text-[var(--foreground)]">
       <div className="map-metal-backdrop" />
       <div className="gold-dust" />
       <div className="vignette" />
@@ -988,7 +1346,17 @@ export function ProductivityApp() {
       {celebration ? <CelebrationOverlay key={celebration.id} celebration={celebration} /> : null}
 
       <div className="relative z-10">
-        <SiteHeader isDemoMode={isDemoMode} isSignedIn={Boolean(session)} onSignOut={handleSignOut} />
+        <SiteHeader
+          isLocalMode={isLocalMode}
+          isSignedIn={Boolean(session)}
+          localWorkspaces={localWorkspaces}
+          activeLocalProfileId={activeLocalProfileId}
+          newProfileName={newProfileName}
+          onNewProfileNameChange={setNewProfileName}
+          onAddLocalProfile={addLocalProfile}
+          onSwitchLocalProfile={switchLocalProfile}
+          onSignOut={handleSignOut}
+        />
 
         <Hero
           profile={profile}
@@ -1080,21 +1448,19 @@ export function ProductivityApp() {
                   return (
                     <div
                       key={category.id}
-                      className="frame-corners hover-lift rounded-md border border-[var(--line)] bg-[rgba(28,24,16,0.55)] p-4"
+                      className="hover-lift rounded-md border border-[var(--line)] bg-[rgba(28,24,16,0.55)] p-4"
                     >
-                      <span className="corner tr" />
-                      <span className="corner bl" />
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                        <div className="flex min-w-0 items-center gap-3">
                           <span
                             className="flex size-10 items-center justify-center rounded-md border"
                             style={{ borderColor: category.color, color: category.color, background: `${category.color}14` }}
                           >
                             <Icon className="size-5" />
                           </span>
-                          <h3 className="font-display text-lg tracking-wide">{category.name}</h3>
+                          <h3 className="min-w-0 font-display text-lg tracking-wide">{category.name}</h3>
                         </div>
-                        <span className="font-mono text-xs text-[var(--muted)]">{count} active</span>
+                        <span className="font-mono text-xs text-[var(--muted)] sm:text-right">{count} active</span>
                       </div>
                       <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{category.description}</p>
                     </div>
@@ -1139,10 +1505,8 @@ export function ProductivityApp() {
                     return (
                       <article
                         key={habit.id}
-                        className={`frame-corners hover-lift rounded-md border p-4 ${completedToday ? "border-[var(--success)]/40 bg-[rgba(155,176,102,0.07)]" : "border-[var(--line)] bg-[rgba(28,24,16,0.55)]"}`}
+                        className={`hover-lift rounded-md border p-4 ${completedToday ? "border-[var(--success)]/40 bg-[rgba(155,176,102,0.07)]" : "border-[var(--line)] bg-[rgba(28,24,16,0.55)]"}`}
                       >
-                        <span className="corner tr" />
-                        <span className="corner bl" />
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                           <div className="flex items-center gap-3">
                             <span className="flex size-10 items-center justify-center rounded-md border border-[var(--line-strong)] text-[var(--gold)]">
@@ -1192,15 +1556,15 @@ export function ProductivityApp() {
             title="Records of the Realm"
             subtitle="Feedback loops that show where the week is heading."
           />
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             <Panel icon={Sparkles} title="Recent Glory" description="The latest XP your blade has earned.">
               <div className="grid gap-3">
                 {xpEvents.slice(0, 7).map((event) => (
                   <div
                     key={event.id}
-                    className="flex items-center justify-between gap-4 rounded-md border border-[var(--line)] bg-[rgba(28,24,16,0.5)] px-3 py-2.5 text-sm"
+                    className="flex flex-col gap-1.5 rounded-md border border-[var(--line)] bg-[rgba(28,24,16,0.5)] px-3 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4"
                   >
-                    <span className="truncate text-[var(--muted)]">{event.description}</span>
+                    <span className="min-w-0 break-words text-[var(--muted)] sm:truncate">{event.description}</span>
                     <span className="font-mono font-semibold text-[var(--gold)]">+{event.points}</span>
                   </div>
                 ))}
@@ -1259,8 +1623,8 @@ export function ProductivityApp() {
           />
           <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
             <Panel icon={Shield} title="Character Sheet" description="Parker's standing across the realm.">
-              <div className="flex items-center gap-4">
-                <div className="relative flex size-20 items-center justify-center rounded-xl border border-[var(--gold)]/60 bg-[rgba(224,178,76,0.1)]">
+              <div className="flex flex-col gap-4 min-[420px]:flex-row min-[420px]:items-center">
+                <div className="relative flex size-16 shrink-0 items-center justify-center rounded-xl border border-[var(--gold)]/60 bg-[rgba(224,178,76,0.1)] sm:size-20">
                   <span
                     className="absolute inset-0 rounded-xl opacity-40"
                     style={{ backgroundImage: "url('/art/crest.webp')", backgroundSize: "cover", backgroundPosition: "center" }}
@@ -1269,7 +1633,7 @@ export function ProductivityApp() {
                     {profile.avatar_initials}
                   </span>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-display text-2xl tracking-wide">{profile.display_name}</h3>
                   <p className="mt-1 flex items-center gap-1.5 text-sm text-[var(--gold)]">
                     <Crown className="size-4" /> Level {levelProgress.level} · {rank.name}
@@ -1280,7 +1644,7 @@ export function ProductivityApp() {
                 <LegendRow icon={Sparkles} label="Total XP" value={String(profile.total_xp)} />
                 <LegendRow icon={Flame} label="Current streak" value={`${profile.current_streak} days`} />
                 <LegendRow icon={TrendingUp} label="Longest streak" value={`${profile.longest_streak} days`} />
-                <LegendRow icon={Compass} label="Account" value={session?.user.email ?? "Demo preview"} />
+                <LegendRow icon={Compass} label="Account" value={session?.user.email ?? "Local profile"} />
               </div>
             </Panel>
 
@@ -1327,10 +1691,8 @@ export function ProductivityApp() {
             {glossaryTerms.map((entry) => (
               <article
                 key={entry.term}
-                className="frame-corners hover-lift rounded-lg border border-[var(--line)] bg-[rgba(28,24,16,0.55)] p-5"
+                className="hover-lift rounded-lg border border-[var(--line)] bg-[rgba(28,24,16,0.55)] p-5"
               >
-                <span className="corner tr" />
-                <span className="corner bl" />
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <h3 className="font-display text-xl font-bold tracking-wide text-[#f4ecd6]">{entry.term}</h3>
                   <span className="rounded-full border border-[var(--gold)]/35 bg-[rgba(224,178,76,0.08)] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--gold)]">
@@ -1345,7 +1707,7 @@ export function ProductivityApp() {
 
         <footer className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
           <div className="gold-rule mb-6" />
-          <p className="text-center font-display text-sm tracking-[0.2em] text-[var(--muted-2)]">
+          <p className="text-center font-display text-xs leading-6 tracking-[0.14em] text-[var(--muted-2)] sm:text-sm sm:tracking-[0.2em]">
             THE LONG ROAD · PARKER&apos;S PRODUCTIVITY PROGRAM
           </p>
         </footer>
@@ -1355,28 +1717,40 @@ export function ProductivityApp() {
 }
 
 function SiteHeader({
-  isDemoMode,
+  isLocalMode,
   isSignedIn,
+  localWorkspaces,
+  activeLocalProfileId,
+  newProfileName,
+  onNewProfileNameChange,
+  onAddLocalProfile,
+  onSwitchLocalProfile,
   onSignOut,
 }: {
-  isDemoMode: boolean;
+  isLocalMode: boolean;
   isSignedIn: boolean;
+  localWorkspaces: LocalWorkspace[];
+  activeLocalProfileId: string;
+  newProfileName: string;
+  onNewProfileNameChange: (value: string) => void;
+  onAddLocalProfile: () => void;
+  onSwitchLocalProfile: (profileId: string) => void;
   onSignOut: () => void;
 }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-[rgba(10,9,7,0.82)] backdrop-blur-xl">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <a href="#dashboard" className="group flex items-center gap-3">
+    <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-[rgba(10,9,7,0.88)] backdrop-blur-xl">
+      <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:min-h-20 sm:px-6 lg:px-8">
+        <a href="#dashboard" className="group flex min-w-0 items-center gap-3">
           <span
-            className="size-11 shrink-0 rounded-md border border-[var(--gold)]/40"
+            className="size-10 shrink-0 rounded-md border border-[var(--gold)]/40 sm:size-11"
             style={{ backgroundImage: "url('/art/crest.webp')", backgroundSize: "cover", backgroundPosition: "center" }}
           />
-          <span className="leading-tight">
-            <span className="block font-mono text-[10px] uppercase tracking-[0.28em] text-[var(--gold)]">Parker System</span>
-            <span className="font-display text-lg tracking-wide">The Long Road</span>
+          <span className="min-w-0 leading-tight">
+            <span className="block font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--gold)] sm:text-[10px] sm:tracking-[0.28em]">Parker System</span>
+            <span className="block truncate font-display text-base tracking-wide sm:text-lg">The Long Road</span>
           </span>
         </a>
-        <nav className="hidden items-center gap-7 font-display text-sm tracking-wide text-[var(--muted)] md:flex">
+        <nav className="hidden items-center gap-4 font-display text-xs tracking-wide text-[var(--muted)] md:flex lg:gap-7 lg:text-sm">
           <a href="#dashboard" className="hover:text-[var(--gold-bright)]">War Table</a>
           <a href="#planner" className="hover:text-[var(--gold-bright)]">Map</a>
           <a href="#quests" className="hover:text-[var(--gold-bright)]">Quests</a>
@@ -1384,19 +1758,84 @@ function SiteHeader({
           <a href="#profile" className="hover:text-[var(--gold-bright)]">Legend</a>
           <a href="#codex" className="hover:text-[var(--gold-bright)]">Codex</a>
         </nav>
-        <div className="flex items-center gap-3">
-          <span className="hidden items-center gap-1.5 rounded-full border border-[var(--line)] px-3 py-1 font-mono text-[11px] text-[var(--muted)] sm:inline-flex">
-            <span className={`size-1.5 rounded-full ${isDemoMode ? "bg-[var(--ember)]" : "bg-[var(--success)]"}`} />
-            {isDemoMode ? "Demo Mode" : "Live Sync"}
-          </span>
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          {isLocalMode ? (
+            <ProfileSwitcher
+              workspaces={localWorkspaces}
+              activeProfileId={activeLocalProfileId}
+              newProfileName={newProfileName}
+              onNewProfileNameChange={onNewProfileNameChange}
+              onAddProfile={onAddLocalProfile}
+              onSwitchProfile={onSwitchLocalProfile}
+            />
+          ) : (
+            <span className="hidden items-center gap-1.5 rounded-full border border-[var(--line)] px-3 py-1 font-mono text-[11px] text-[var(--muted)] sm:inline-flex">
+              <span className="size-1.5 rounded-full bg-[var(--success)]" />
+              Live Sync
+            </span>
+          )}
           {isSignedIn ? (
-            <button onClick={onSignOut} className="btn-ghost rounded-md px-4 py-2 text-sm font-semibold">
+            <button onClick={onSignOut} className="btn-ghost rounded-md px-3 py-2 text-xs font-semibold sm:px-4 sm:text-sm">
               Sign Out
             </button>
           ) : null}
         </div>
       </div>
     </header>
+  );
+}
+
+function ProfileSwitcher({
+  workspaces,
+  activeProfileId,
+  newProfileName,
+  onNewProfileNameChange,
+  onAddProfile,
+  onSwitchProfile,
+}: {
+  workspaces: LocalWorkspace[];
+  activeProfileId: string;
+  newProfileName: string;
+  onNewProfileNameChange: (value: string) => void;
+  onAddProfile: () => void;
+  onSwitchProfile: (profileId: string) => void;
+}) {
+  return (
+    <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
+      <label className="flex min-w-36 items-center gap-2 rounded-md border border-[var(--line)] bg-[rgba(8,7,5,0.45)] px-2.5 py-2">
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">Profile</span>
+        <select
+          value={activeProfileId}
+          onChange={(event) => onSwitchProfile(event.target.value)}
+          className="min-w-0 flex-1 bg-transparent font-display text-sm tracking-wide text-[var(--foreground)] outline-none"
+        >
+          {workspaces.map((workspace) => (
+            <option key={workspace.profile.id} value={workspace.profile.id}>
+              {workspace.profile.display_name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="flex min-w-0 items-center gap-2">
+        <input
+          value={newProfileName}
+          onChange={(event) => onNewProfileNameChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              onAddProfile();
+            }
+          }}
+          placeholder="New profile"
+          className="field-input h-9 w-32 px-3 py-2 text-xs sm:w-40"
+        />
+        <button
+          onClick={onAddProfile}
+          className="btn-gold inline-flex h-9 items-center justify-center gap-1.5 rounded-md px-3 text-xs font-bold"
+        >
+          <Plus className="size-3.5" /> Add
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -1432,37 +1871,37 @@ function Hero(props: HeroProps) {
       <div className="absolute inset-0 z-0 bg-gradient-to-b from-[rgba(10,9,7,0.55)] via-[rgba(10,9,7,0.78)] to-[var(--background)]" />
       <div className="absolute inset-0 z-0 bg-gradient-to-r from-[rgba(10,9,7,0.85)] via-transparent to-[rgba(10,9,7,0.55)]" />
 
-      <div className="relative z-10 mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-24">
+      <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-8 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-20 xl:py-24">
         <div className="rise flex flex-col justify-center">
           <p className="eyebrow mb-5 flex items-center gap-2">
             <Compass className="size-3.5" /> Personal Command Center
           </p>
-          <h1 className="max-w-3xl font-display text-5xl font-black leading-[0.98] tracking-tight text-[#f7f1df] drop-shadow-[0_2px_24px_rgba(0,0,0,0.8)] sm:text-6xl lg:text-7xl">
+          <h1 className="max-w-3xl text-balance font-display text-[clamp(2.6rem,12vw,4.75rem)] font-black leading-[1.02] tracking-tight text-[#f7f1df] drop-shadow-[0_2px_24px_rgba(0,0,0,0.8)] sm:text-6xl lg:text-6xl xl:text-7xl">
             Rise, <span className="text-gold-gradient">Wanderer</span>.<br />
             Walk the Long Road.
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-8 text-[#d8cfb8]">
+          <p className="mt-5 max-w-xl text-base leading-7 text-[#d8cfb8] sm:mt-6 sm:text-lg sm:leading-8">
             Schedule the day, fell your missions, swear your oaths, and earn the XP that turns small wins into
             relentless momentum.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <a href="#dashboard" className="btn-gold inline-flex items-center justify-center gap-2 rounded-md px-7 py-3.5 text-sm font-bold">
+            <a href="#dashboard" className="btn-gold inline-flex w-full items-center justify-center gap-2 rounded-md px-5 py-3.5 text-sm font-bold sm:w-auto sm:px-7">
               <Swords className="size-4" /> Enter the War Table
             </a>
-            <a href="#quests" className="btn-ghost inline-flex items-center justify-center gap-2 rounded-md px-7 py-3.5 text-sm font-bold">
+            <a href="#quests" className="btn-ghost inline-flex w-full items-center justify-center gap-2 rounded-md px-5 py-3.5 text-sm font-bold sm:w-auto sm:px-7">
               <Flame className="size-4" /> Swear an Oath
             </a>
           </div>
-          <p className="mt-6 flex items-center gap-2 text-sm text-[var(--muted)]">
+          <p className="mt-6 flex max-w-xl items-start gap-2 text-sm leading-6 text-[var(--muted)]">
             <Sparkles className="size-4 text-[var(--gold)]" /> {message}
           </p>
         </div>
 
-        <aside className="rise frame frame-corners rounded-lg p-6 shadow-2xl shadow-black/50 backdrop-blur-md">
+        <aside className="rise frame frame-corners rounded-lg p-4 shadow-2xl shadow-black/50 backdrop-blur-md sm:p-6">
           <span className="corner tr" />
           <span className="corner bl" />
-          <div className="mb-6 flex items-center justify-between border-b border-[var(--line)] pb-5">
-            <div>
+          <div className="mb-5 flex flex-col gap-4 border-b border-[var(--line)] pb-5 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between sm:mb-6">
+            <div className="min-w-0">
               <p className="eyebrow">Operator</p>
               <h2 className="mt-1 font-display text-2xl tracking-wide">{profile.display_name}</h2>
               <p className="mt-1 flex items-center gap-1.5 text-sm text-[var(--gold)]">
@@ -1470,7 +1909,7 @@ function Hero(props: HeroProps) {
               </p>
             </div>
             <div
-              className="relative flex size-20 items-center justify-center rounded-xl border border-[var(--gold)]/60"
+              className="relative flex size-16 shrink-0 items-center justify-center rounded-xl border border-[var(--gold)]/60 sm:size-20"
               style={{ backgroundImage: "url('/art/crest.webp')", backgroundSize: "cover", backgroundPosition: "center" }}
             >
               <span className="absolute inset-0 rounded-xl bg-black/30" />
@@ -1481,21 +1920,21 @@ function Hero(props: HeroProps) {
           </div>
 
           {/* Momentum meter */}
-          <div className="mb-5 flex items-center gap-4 rounded-md border border-[var(--ember)]/30 bg-[rgba(217,120,67,0.08)] p-4">
-            <Flame className="flame-glow size-9 text-[var(--flame)]" />
+          <div className="mb-5 flex flex-col gap-3 rounded-md border border-[var(--ember)]/30 bg-[rgba(217,120,67,0.08)] p-4 min-[420px]:flex-row min-[420px]:items-center min-[420px]:gap-4">
+            <Flame className="flame-glow size-8 shrink-0 text-[var(--flame)] sm:size-9" />
             <div className="flex-1">
               <p className="eyebrow text-[var(--ember-bright)]">Momentum</p>
               <p className="font-display text-2xl tracking-wide">
                 {profile.current_streak}-Day Streak
               </p>
             </div>
-            <div className="text-right">
+            <div className="min-[420px]:text-right">
               <p className="font-mono text-xs text-[var(--muted)]">Best</p>
               <p className="font-display text-xl text-[var(--gold)]">{profile.longest_streak}d</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid gap-3 sm:grid-cols-3">
             <MiniStat label="Level" value={String(levelProgress.level)} />
             <MiniStat label="Total XP" value={String(profile.total_xp)} />
             <MiniStat label="To Next" value={String(levelProgress.remainingXp)} />
@@ -1545,10 +1984,10 @@ function CelebrationOverlay({ celebration }: { celebration: Celebration }) {
     <div className="celebrate">
       <div className="celebrate-text">
         <Icon className="mx-auto mb-3 size-16 text-[var(--gold-bright)] drop-shadow-[0_0_24px_rgba(246,213,122,0.8)]" />
-        <p className="text-gold-gradient text-5xl font-black tracking-[0.15em] drop-shadow-[0_2px_30px_rgba(0,0,0,0.9)] sm:text-7xl">
+        <p className="text-gold-gradient text-[clamp(2.6rem,14vw,5rem)] font-black tracking-[0.08em] drop-shadow-[0_2px_30px_rgba(0,0,0,0.9)] sm:tracking-[0.15em]">
           {celebration.title}
         </p>
-        <p className="mt-3 font-display text-xl tracking-[0.3em] text-[#e8dcc0]">{celebration.subtitle}</p>
+        <p className="mt-3 px-4 font-display text-base leading-7 tracking-[0.12em] text-[#e8dcc0] sm:text-xl sm:tracking-[0.3em]">{celebration.subtitle}</p>
       </div>
     </div>
   );
@@ -1693,10 +2132,8 @@ function StatCard({
 }) {
   const color = tone === "ember" ? "var(--ember-bright)" : "var(--gold)";
   return (
-    <div className="frame-corners hover-lift rounded-lg border border-[var(--line)] bg-[rgba(28,24,16,0.6)] p-5">
-      <span className="corner tr" />
-      <span className="corner bl" />
-      <div className="flex items-center justify-between">
+    <div className="hover-lift rounded-lg border border-[var(--line)] bg-[rgba(28,24,16,0.6)] p-5">
+      <div className="flex items-start justify-between gap-3">
         <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--muted)]">{label}</p>
         <Icon className="size-5" style={{ color }} />
       </div>
@@ -1719,11 +2156,11 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 
 function LegendRow({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between rounded-md border border-[var(--line)] bg-[rgba(28,24,16,0.45)] px-3 py-2.5">
+    <div className="flex flex-col gap-1.5 rounded-md border border-[var(--line)] bg-[rgba(28,24,16,0.45)] px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <span className="flex items-center gap-2 text-[var(--muted)]">
         <Icon className="size-4 text-[var(--gold)]" /> {label}
       </span>
-      <span className="font-mono text-sm text-[var(--foreground)]">{value}</span>
+      <span className="break-all font-mono text-sm text-[var(--foreground)] sm:text-right">{value}</span>
     </div>
   );
 }
@@ -1759,10 +2196,8 @@ function TaskList({
         return (
           <article
             key={task.id}
-            className={`frame-corners hover-lift rounded-md border p-4 ${done ? "border-[var(--line)] bg-[rgba(8,7,5,0.4)] opacity-70" : "border-[var(--line)] bg-[rgba(28,24,16,0.55)]"}`}
+            className={`hover-lift rounded-md border p-4 ${done ? "border-[var(--line)] bg-[rgba(8,7,5,0.4)] opacity-70" : "border-[var(--line)] bg-[rgba(28,24,16,0.55)]"}`}
           >
-            <span className="corner tr" />
-            <span className="corner bl" />
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex min-w-0 gap-3">
                 <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md border border-[var(--line-strong)] text-[var(--gold)]">
@@ -1784,11 +2219,11 @@ function TaskList({
                   {task.notes ? <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{task.notes}</p> : null}
                 </div>
               </div>
-              <div className="flex shrink-0 flex-col gap-2 sm:min-w-36">
+              <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:min-w-36">
                 {done ? (
                   <button
                     onClick={() => onUndoComplete(task)}
-                    className="btn-ghost inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold"
+                    className="btn-ghost inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold sm:w-auto"
                   >
                     <RotateCcw className="size-4" /> Undo
                   </button>
@@ -1796,7 +2231,7 @@ function TaskList({
                   <>
                     <button
                       onClick={() => (isConfirming ? onComplete(task) : onConfirmationChange(task.id))}
-                      className="btn-gold inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold"
+                      className="btn-gold inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold sm:w-auto"
                     >
                       {isConfirming ? (
                         <>
@@ -1844,7 +2279,11 @@ function TaskForm({
     onChange(applyGoalAutomation(nextInput, categories));
   }
 
-  function fillSuggestion(suggestion: GoalSuggestion) {
+  function fillSuggestion(suggestion: GoalSuggestion | undefined) {
+    if (!suggestion) {
+      return;
+    }
+
     onChange({
       ...input,
       title: suggestion.title,
@@ -1873,21 +2312,25 @@ function TaskForm({
             {priorityLabel[recommendation.priority]} · {recommendation.xpValue} XP
           </p>
         </div>
-        <div className="grid gap-2">
-          {goalSuggestions.map((suggestion) => (
-            <button
-              key={suggestion.title}
-              onClick={() => fillSuggestion(suggestion)}
-              className="btn-ghost rounded-md px-3 py-2 text-left text-sm leading-5"
-            >
-              <span className="block font-display tracking-wide text-[var(--foreground)]">{suggestion.title}</span>
-              <span className="mt-0.5 block font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">
-                {categories.find((category) => category.id === suggestion.categoryId)?.name ?? "Suggested"} ·{" "}
-                {priorityLabel[suggestion.priority]} · {suggestion.xpValue} XP
-              </span>
-            </button>
+        <select
+          value=""
+          onChange={(event) => {
+            if (!event.target.value) {
+              return;
+            }
+            fillSuggestion(goalSuggestions[Number(event.target.value)]);
+          }}
+          className="field-input"
+          aria-label="Choose a preset goal"
+        >
+          <option value="">Choose from {goalSuggestions.length} preset examples…</option>
+          {goalSuggestions.map((suggestion, index) => (
+            <option key={`${suggestion.categoryId}-${suggestion.title}`} value={index}>
+              {suggestion.title} · {categories.find((category) => category.id === suggestion.categoryId)?.name ?? "Suggested"} ·{" "}
+              {priorityLabel[suggestion.priority]} · {suggestion.xpValue} XP
+            </option>
           ))}
-        </div>
+        </select>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Domain">

@@ -48,11 +48,33 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-body), Georgia, "Times New Roman", serif;
   -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  min-width: 0;
+}
+
+p,
+h1,
+h2,
+h3 {
+  overflow-wrap: break-word;
 }
 
 .font-display {
@@ -158,34 +180,33 @@ a:active {
 }
 
 .parchment-bg {
-  background:
-    radial-gradient(circle at 50% 0%, rgba(67, 49, 20, 0.22), transparent 42%),
-    linear-gradient(180deg, var(--background-2), var(--background));
+  background: var(--background);
   isolation: isolate;
 }
 
+/* Full-page map backdrop: a fixed cover layer so the cartography sits
+   behind the entire length of the page at any scroll position. */
 .map-metal-backdrop {
   pointer-events: none;
   position: fixed;
   inset: 0;
   z-index: 0;
-  opacity: 0.34;
-  background-image:
-    linear-gradient(rgba(10, 9, 7, 0.22), rgba(10, 9, 7, 0.36)),
-    url("/art/parchment-texture.webp");
-  background-size: cover, 860px auto;
-  background-position: center, center top;
-  background-repeat: no-repeat, repeat;
-  mix-blend-mode: screen;
+  background-image: url("/art/map-backdrop.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  opacity: 0.85;
 }
 
+/* Readability overlay on top of the map so panels and text stay legible. */
 .map-metal-backdrop::after {
   content: "";
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 50% 20%, transparent 0%, rgba(10, 9, 7, 0.2) 58%, rgba(10, 9, 7, 0.82) 100%),
-    linear-gradient(90deg, rgba(10, 9, 7, 0.45), transparent 28%, transparent 72%, rgba(10, 9, 7, 0.45));
+    radial-gradient(120% 80% at 50% 18%, transparent 0%, rgba(8, 7, 5, 0.35) 55%, rgba(8, 7, 5, 0.78) 100%),
+    linear-gradient(180deg, rgba(8, 7, 5, 0.5) 0%, rgba(8, 7, 5, 0.32) 30%, rgba(8, 7, 5, 0.52) 100%);
 }
 
 /* ---------- Ornamental frame (corner brackets) ---------- */
@@ -193,6 +214,7 @@ a:active {
   position: relative;
   background: linear-gradient(180deg, rgba(34, 28, 18, 0.92), rgba(16, 13, 9, 0.92));
   border: 1px solid var(--line);
+  min-width: 0;
 }
 .frame::before,
 .frame::after {
@@ -310,7 +332,8 @@ a:active {
   color: var(--foreground);
   border-radius: 4px;
   padding: 0.6rem 0.75rem;
-  font-size: 0.875rem;
+  min-height: 2.75rem;
+  font-size: 1rem;
   outline: none;
   font-family: var(--font-body), serif;
 }
@@ -426,6 +449,12 @@ a:active {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+
   .gold-dust,
   .flame-glow,
   .xp-fill::after,
@@ -433,5 +462,47 @@ a:active {
   .celebrate,
   .celebrate-text {
     animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .grain {
+    opacity: 0.045;
+  }
+
+  .gold-dust {
+    opacity: 0.28;
+  }
+
+  .vignette {
+    background: radial-gradient(140% 100% at 50% 0%, transparent 36%, rgba(5, 4, 3, 0.64) 100%);
+  }
+
+  .frame::before,
+  .frame::after,
+  .frame-corners > .corner {
+    width: 10px;
+    height: 10px;
+    opacity: 0.55;
+  }
+
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+  }
+
+  .btn-gold,
+  .btn-ghost {
+    letter-spacing: 0.025em;
+  }
+}
+
+@media (max-width: 380px) {
+  .field-input {
+    padding-inline: 0.65rem;
+  }
+
+  .font-display {
+    letter-spacing: 0.01em;
   }
 }
