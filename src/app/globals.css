@@ -1,8 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0d0f0c;
+  --foreground: #f4f1e8;
+  --surface: #151812;
+  --surface-strong: #1d2118;
+  --line: #33382a;
+  --muted: #a6a18f;
+  --accent: #d6a84f;
+  --accent-strong: #f0c56a;
+  --danger: #d06d5f;
+  --success: #86a96b;
 }
 
 @theme inline {
@@ -12,15 +20,52 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+button:active,
+a:active {
+  transform: translateY(1px);
+}
+
+::selection {
+  background: rgba(214, 168, 79, 0.35);
+  color: var(--foreground);
+}
+
+.tactical-grid {
+  background-image:
+    linear-gradient(rgba(244, 241, 232, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(244, 241, 232, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.grain {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  opacity: 0.11;
+  background-image: radial-gradient(rgba(244, 241, 232, 0.35) 0.7px, transparent 0.7px);
+  background-size: 4px 4px;
 }
