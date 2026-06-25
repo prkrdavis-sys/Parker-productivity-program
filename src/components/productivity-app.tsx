@@ -3,6 +3,31 @@
 import type { Session } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Award,
+  BrainCircuit,
+  Check,
+  ChevronRight,
+  CalendarClock,
+  Compass,
+  Crown,
+  Dumbbell,
+  Flame,
+  Hammer,
+  Heart,
+  Lock,
+  type LucideIcon,
+  Plus,
+  ScrollText,
+  Shield,
+  Skull,
+  Sparkles,
+  Swords,
+  Target,
+  Tent,
+  TrendingUp,
+  Trophy,
+} from "lucide-react";
+import {
   defaultAchievements,
   defaultCategories,
   demoCompletions,
@@ -56,10 +81,17 @@ const initialHabitInput: NewHabitInput = {
 };
 
 const priorityStyles: Record<Priority, string> = {
-  low: "border-stone-600 text-stone-300",
+  low: "border-stone-600/70 text-stone-300",
   medium: "border-[#7f8d74] text-[#c8d1ba]",
   high: "border-[#d6a84f] text-[#f0c56a]",
-  critical: "border-[#d06d5f] text-[#f0a397]",
+  critical: "border-[#cf5b48] text-[#f0a397]",
+};
+
+const priorityLabel: Record<Priority, string> = {
+  low: "Skirmish",
+  medium: "Mission",
+  high: "Vanguard",
+  critical: "Boss Fight",
 };
 
 const cadenceLabels: Record<HabitCadence, string> = {
@@ -68,10 +100,27 @@ const cadenceLabels: Record<HabitCadence, string> = {
   custom: "Custom",
 };
 
-type StatCardProps = {
-  label: string;
-  value: string;
-  detail: string;
+const categoryIcons: Record<string, LucideIcon> = {
+  "home-base": Tent,
+  "career-forge": Hammer,
+  body: Dumbbell,
+  "command-center": Compass,
+  skills: BrainCircuit,
+  personal: Heart,
+};
+
+function categoryIcon(id: string | null | undefined): LucideIcon {
+  if (id && categoryIcons[id]) {
+    return categoryIcons[id];
+  }
+  return ScrollText;
+}
+
+type Celebration = {
+  id: number;
+  title: string;
+  subtitle: string;
+  tone: "gold" | "ember" | "crown";
 };
 
 export function ProductivityApp() {
@@ -91,9 +140,22 @@ export function ProductivityApp() {
   const [taskInput, setTaskInput] = useState<NewTaskInput>(initialTaskInput);
   const [habitInput, setHabitInput] = useState<NewHabitInput>(initialHabitInput);
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState("Demo mode is active until Supabase env vars are configured.");
+  const [message, setMessage] = useState("Demo mode is active until the realm is bound to Supabase.");
+  const [celebration, setCelebration] = useState<Celebration | null>(null);
 
   const isDemoMode = !supabase || !session;
+
+  const triggerCelebration = useCallback((title: string, subtitle: string, tone: Celebration["tone"]) => {
+    setCelebration({ id: Date.now(), title, subtitle, tone });
+  }, []);
+
+  useEffect(() => {
+    if (!celebration) {
+      return;
+    }
+    const timeout = window.setTimeout(() => setCelebration(null), 1900);
+    return () => window.clearTimeout(timeout);
+  }, [celebration]);
 
   useEffect(() => {
     if (!supabase) {
@@ -103,7 +165,7 @@ export function ProductivityApp() {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       if (data.session) {
-        setMessage("Signed in and synced with Supabase.");
+        setMessage("Signed in. The realm is bound and synced.");
       }
     });
 
@@ -122,8 +184,9 @@ export function ProductivityApp() {
 
   const completedTasks = tasks.filter((task) => task.status === "completed");
   const pendingTasks = tasks.filter((task) => task.status === "pending");
-  const todayTasks = pendingTasks.filter(isDueToday);
   const overdueTasks = pendingTasks.filter(isOverdue);
+  const dueTodayCount = pendingTasks.filter(isDueToday).length;
+  const todayTasks = pendingTasks.filter((task) => isDueToday(task) && !isOverdue(task));
   const upcomingTasks = pendingTasks.filter((task) => !isDueToday(task) && !isOverdue(task)).slice(0, 5);
   const criticalCompleted = completedTasks.filter((task) => task.priority === "critical").length;
   const totalCompletions = completions.length;
@@ -143,6 +206,12 @@ export function ProductivityApp() {
       !unlockedAchievements.some((unlocked) => unlocked.id === achievement.id) &&
       !userAchievements.some((userAchievement) => userAchievement.achievement_id === achievement.id),
   );
+
+  const dailyDone = completions.filter(
+    (completion) => completion.completed_at.slice(0, 10) === getTodayKey(),
+  ).length;
+  const dailyTarget = Math.max(3, todayTasks.length + overdueTasks.length);
+  const dailyProgress = Math.min(100, Math.round((dailyDone / dailyTarget) * 100));
 
   const loadWorkspace = useCallback(async () => {
     if (!supabase || !session) {
@@ -218,7 +287,7 @@ export function ProductivityApp() {
       setTaskInput((current) => ({ ...current, category_id: nextCategories[0].id }));
       setHabitInput((current) => ({ ...current, category_id: nextCategories[0].id }));
     }
-    setMessage("Workspace synced with Supabase.");
+    setMessage("The realm is synced. Your campaign awaits.");
     setIsLoading(false);
   }, [session, supabase]);
 
@@ -234,7 +303,7 @@ export function ProductivityApp() {
 
   async function handleAuth() {
     if (!supabase) {
-      setMessage("Add Supabase env vars to use login. Demo mode is active right now.");
+      setMessage("Bind Supabase env vars to enter. Demo mode is active right now.");
       return;
     }
 
@@ -252,7 +321,7 @@ export function ProductivityApp() {
     if (result.error) {
       setMessage(result.error.message);
     } else {
-      setMessage(authMode === "signup" ? "Account created. Check email settings if confirmation is required." : "Signed in.");
+      setMessage(authMode === "signup" ? "Account forged. Confirm by email if required." : "Welcome back, wanderer.");
     }
     setIsLoading(false);
   }
@@ -269,7 +338,7 @@ export function ProductivityApp() {
 
   async function addTask() {
     if (!taskInput.title.trim()) {
-      setMessage("Give the mission a clear title first.");
+      setMessage("Name the mission before you set out.");
       return;
     }
 
@@ -302,12 +371,12 @@ export function ProductivityApp() {
     }
 
     setTaskInput({ ...initialTaskInput, category_id: selectedCategory || initialTaskInput.category_id });
-    setMessage("Mission added.");
+    setMessage("Mission inscribed. The road is set.");
   }
 
   async function addHabit() {
     if (!habitInput.title.trim()) {
-      setMessage("Give the quest a clear title first.");
+      setMessage("Name the quest before you swear the oath.");
       return;
     }
 
@@ -338,7 +407,7 @@ export function ProductivityApp() {
     }
 
     setHabitInput({ ...initialHabitInput, category_id: selectedCategory || initialHabitInput.category_id });
-    setMessage("Quest added.");
+    setMessage("Oath sworn. The quest is bound to your path.");
   }
 
   async function completeTask(task: Task) {
@@ -351,7 +420,7 @@ export function ProductivityApp() {
       sourceType: "task",
       sourceId: task.id,
       points: task.xp_value,
-      description: `Completed ${task.title}`,
+      description: `Felled ${task.title}`,
     });
 
     const updatedTasks = tasks.map((currentTask) =>
@@ -363,6 +432,7 @@ export function ProductivityApp() {
       event,
       profileDelta: task.xp_value,
       nextCompletions: [completion, ...completions],
+      celebrationTitle: task.priority === "critical" ? "BOSS FELLED" : "MISSION FELLED",
       persist: async () => {
         if (!supabase || !session) {
           return null;
@@ -391,7 +461,7 @@ export function ProductivityApp() {
 
   async function completeHabit(habit: Habit) {
     if (habit.last_completed_at && getTodayKey() === habit.last_completed_at.slice(0, 10)) {
-      setMessage("This quest is already complete for today.");
+      setMessage("This quest is already fulfilled today.");
       return;
     }
 
@@ -401,7 +471,7 @@ export function ProductivityApp() {
       sourceType: "habit",
       sourceId: habit.id,
       points: habit.xp_value,
-      description: `Completed ${habit.title}`,
+      description: `Fulfilled ${habit.title}`,
     });
 
     const updatedHabits = habits.map((currentHabit) =>
@@ -413,6 +483,7 @@ export function ProductivityApp() {
       event,
       profileDelta: habit.xp_value,
       nextCompletions: [completion, ...completions],
+      celebrationTitle: "QUEST FULFILLED",
       persist: async () => {
         if (!supabase || !session) {
           return null;
@@ -485,12 +556,14 @@ export function ProductivityApp() {
     event,
     profileDelta,
     nextCompletions,
+    celebrationTitle,
     persist,
   }: {
     completion: TaskCompletion;
     event: XpEvent;
     profileDelta: number;
     nextCompletions: TaskCompletion[];
+    celebrationTitle: string;
     persist: () => Promise<string | null>;
   }) {
     const error = await persist();
@@ -500,12 +573,14 @@ export function ProductivityApp() {
       return;
     }
 
+    const previousLevel = profile.level;
     const nextTotalXp = profile.total_xp + profileDelta;
     const nextStreak = calculateCurrentStreak(nextCompletions);
+    const nextLevel = calculateLevel(nextTotalXp);
     const nextProfile = {
       ...profile,
       total_xp: nextTotalXp,
-      level: calculateLevel(nextTotalXp),
+      level: nextLevel,
       current_streak: nextStreak,
       longest_streak: Math.max(profile.longest_streak, nextStreak),
     };
@@ -530,326 +605,573 @@ export function ProductivityApp() {
     setCompletions(nextCompletions);
     setXpEvents((current) => [event, ...current]);
     setProfile(nextProfile);
-    setMessage(`+${completion.xp_awarded} XP logged. Keep moving.`);
+    setMessage(`+${completion.xp_awarded} XP claimed. Keep the momentum.`);
+
+    if (nextLevel > previousLevel) {
+      const newRank = getRank(nextLevel);
+      triggerCelebration("LEVEL UP", `Level ${nextLevel} — ${newRank.name}`, "crown");
+    } else {
+      triggerCelebration(celebrationTitle, `+${completion.xp_awarded} XP`, "gold");
+    }
   }
 
   return (
-    <main className="min-h-[100dvh] overflow-hidden bg-[var(--background)] text-[var(--foreground)]">
+    <main className="relative min-h-[100dvh] parchment-bg text-[var(--foreground)]">
+      <div className="gold-dust" />
+      <div className="vignette" />
       <div className="grain" />
-      <div className="tactical-grid min-h-[100dvh]">
-        <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-[rgba(13,15,12,0.88)] backdrop-blur-xl">
-          <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-            <a href="#dashboard" className="group">
-              <span className="block font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--accent)]">
-                Parker System
-              </span>
-              <span className="text-lg font-semibold tracking-tight">Productivity Program</span>
-            </a>
-            <nav className="hidden items-center gap-6 text-sm text-[var(--muted)] md:flex">
-              <a href="#planner" className="hover:text-[var(--foreground)]">
-                Planner
-              </a>
-              <a href="#quests" className="hover:text-[var(--foreground)]">
-                Quests
-              </a>
-              <a href="#analytics" className="hover:text-[var(--foreground)]">
-                Analytics
-              </a>
-              <a href="#profile" className="hover:text-[var(--foreground)]">
-                Profile
-              </a>
-            </nav>
-            <div className="flex items-center gap-3">
-              <span className="hidden rounded-full border border-[var(--line)] px-3 py-1 font-mono text-xs text-[var(--muted)] sm:inline-flex">
-                {isDemoMode ? "Demo Mode" : "Live Sync"}
-              </span>
-              {session ? (
-                <button
-                  onClick={handleSignOut}
-                  className="rounded-full border border-[var(--line)] px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]"
-                >
-                  Sign Out
-                </button>
-              ) : null}
-            </div>
+
+      {celebration ? <CelebrationOverlay key={celebration.id} celebration={celebration} /> : null}
+
+      <div className="relative z-10">
+        <SiteHeader isDemoMode={isDemoMode} isSignedIn={Boolean(session)} onSignOut={handleSignOut} />
+
+        <Hero
+          profile={profile}
+          rank={rank.name}
+          levelProgress={levelProgress}
+          message={message}
+          dailyDone={dailyDone}
+          dailyTarget={dailyTarget}
+          dailyProgress={dailyProgress}
+          authMode={authMode}
+          email={email}
+          password={password}
+          isLoading={isLoading}
+          hasSupabase={Boolean(supabase)}
+          isSignedIn={Boolean(session)}
+          onAuthModeChange={setAuthMode}
+          onEmailChange={setEmail}
+          onPasswordChange={setPassword}
+          onSubmit={handleAuth}
+        />
+
+        {/* Command bar */}
+        <section id="dashboard" className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
+          <SectionTitle
+            icon={Swords}
+            kicker="War Table"
+            title="Today's Campaign"
+            subtitle="The state of the realm at a glance. Strike where it matters most."
+          />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard icon={Target} label="Due Today" value={String(dueTodayCount)} detail="Missions awaiting" tone="gold" />
+            <StatCard icon={Skull} label="Overdue" value={String(overdueTasks.length)} detail="Closing in" tone="ember" />
+            <StatCard icon={TrendingUp} label="Week XP" value={String(weeklyXp)} detail="Recent output" tone="gold" />
+            <StatCard icon={Trophy} label="Total Wins" value={String(totalCompletions)} detail="Battles won" tone="gold" />
           </div>
-        </header>
-
-        <section className="mx-auto grid min-h-[calc(100dvh-80px)] max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-16">
-          <div className="flex flex-col justify-center">
-            <p className="mb-5 font-mono text-xs uppercase tracking-[0.24em] text-[var(--accent)]">
-              Personal command center
-            </p>
-            <h1 className="max-w-3xl text-5xl font-semibold leading-[0.98] tracking-[-0.06em] text-[#f7f1df] sm:text-6xl lg:text-7xl">
-              Parker&apos;s Productivity Program
-            </h1>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-[var(--muted)]">
-              Schedule the day, clear missions, earn XP, and keep momentum visible.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <a
-                href="#dashboard"
-                className="inline-flex items-center justify-center rounded-full bg-[var(--accent)] px-6 py-3 text-sm font-bold text-[#16130b] hover:bg-[var(--accent-strong)]"
-              >
-                Open Dashboard
-              </a>
-              <a
-                href="#planner"
-                className="inline-flex items-center justify-center rounded-full border border-[var(--line)] px-6 py-3 text-sm font-bold text-[var(--foreground)] hover:border-[var(--accent)]"
-              >
-                Add Mission
-              </a>
-            </div>
-            <p className="mt-5 text-sm text-[var(--muted)]">{message}</p>
-          </div>
-
-          <aside className="rounded-[28px] border border-[var(--line)] bg-[rgba(21,24,18,0.92)] p-5 shadow-2xl shadow-black/30 sm:p-6">
-            <div className="mb-6 flex items-center justify-between border-b border-[var(--line)] pb-5">
-              <div>
-                <p className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--muted)]">Operator</p>
-                <h2 className="mt-1 text-2xl font-semibold">{profile.display_name}</h2>
-              </div>
-              <div className="flex size-16 items-center justify-center rounded-2xl border border-[var(--accent)] bg-[rgba(214,168,79,0.12)] text-2xl font-black text-[var(--accent)]">
-                {profile.avatar_initials}
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <StatCard label="Level" value={String(levelProgress.level)} detail={rank.name} />
-              <StatCard label="XP" value={String(profile.total_xp)} detail={`${levelProgress.remainingXp} to next`} />
-              <StatCard label="Streak" value={`${profile.current_streak}d`} detail="Current run" />
-            </div>
-
-            <div className="mt-6">
-              <div className="mb-2 flex items-center justify-between text-sm">
-                <span className="text-[var(--muted)]">Level progress</span>
-                <span className="font-mono text-[var(--accent)]">{Math.round(levelProgress.progress)}%</span>
-              </div>
-              <div className="h-3 overflow-hidden rounded-full bg-[#282d20]">
-                <div
-                  className="h-full rounded-full bg-[var(--accent)]"
-                  style={{ width: `${levelProgress.progress}%` }}
-                />
-              </div>
-            </div>
-
-            <AuthPanel
-              authMode={authMode}
-              email={email}
-              password={password}
-              isLoading={isLoading}
-              hasSupabase={Boolean(supabase)}
-              isSignedIn={Boolean(session)}
-              onAuthModeChange={setAuthMode}
-              onEmailChange={setEmail}
-              onPasswordChange={setPassword}
-              onSubmit={handleAuth}
-            />
-          </aside>
         </section>
 
-        <section id="dashboard" className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
-          <div className="grid gap-5 lg:grid-cols-4">
-            <StatCard label="Today" value={String(todayTasks.length)} detail="Due missions" />
-            <StatCard label="Overdue" value={String(overdueTasks.length)} detail="Needs attention" />
-            <StatCard label="Week XP" value={String(weeklyXp)} detail="Recent output" />
-            <StatCard label="Wins" value={String(totalCompletions)} detail="Completed records" />
-          </div>
-
-          <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.95fr]">
-            <Panel title="Today's Missions" description="The clearest list of what deserves attention now.">
+        {/* Missions */}
+        <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+          <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+            <Panel icon={ScrollText} title="Today's Missions" description="The clearest list of what deserves your steel right now.">
               <TaskList
                 tasks={[...overdueTasks, ...todayTasks]}
                 categories={categoryById}
-                emptyText="No urgent missions. Add one below or work ahead."
+                emptyText="No urgent missions. Forge one below or march ahead."
                 onComplete={completeTask}
               />
-              <div className="mt-5 border-t border-[var(--line)] pt-5">
-                <h3 className="mb-3 text-sm font-semibold text-[var(--muted)]">Upcoming</h3>
-                <TaskList
-                  tasks={upcomingTasks}
-                  categories={categoryById}
-                  emptyText="No upcoming missions scheduled yet."
-                  onComplete={completeTask}
-                />
+              {upcomingTasks.length > 0 ? (
+                <div className="mt-6 border-t border-[var(--line)] pt-5">
+                  <h3 className="eyebrow mb-3 flex items-center gap-2">
+                    <CalendarClock className="size-3.5" /> On the Horizon
+                  </h3>
+                  <TaskList
+                    tasks={upcomingTasks}
+                    categories={categoryById}
+                    emptyText="No upcoming missions scheduled yet."
+                    onComplete={completeTask}
+                  />
+                </div>
+              ) : null}
+            </Panel>
+
+            <Panel icon={Plus} title="Forge a Mission" description="Set a goal, name the stakes, claim the bounty.">
+              <TaskForm input={taskInput} categories={categories} onChange={setTaskInput} onSubmit={addTask} />
+            </Panel>
+          </div>
+        </section>
+
+        {/* Planner */}
+        <section id="planner" className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+          <SectionTitle
+            icon={Compass}
+            kicker="Cartography"
+            title="The Map of Your Domains"
+            subtitle="Six territories to conquer. Keep every front advancing."
+          />
+          <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
+            <Panel icon={Shield} title="Domains" description="Every territory you fight to hold.">
+              <div className="grid gap-3">
+                {categories.map((category) => {
+                  const Icon = categoryIcon(category.id);
+                  const count = tasks.filter((task) => task.category_id === category.id).length;
+                  return (
+                    <div
+                      key={category.id}
+                      className="frame-corners hover-lift rounded-md border border-[var(--line)] bg-[rgba(28,24,16,0.55)] p-4"
+                    >
+                      <span className="corner tr" />
+                      <span className="corner bl" />
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="flex size-10 items-center justify-center rounded-md border"
+                            style={{ borderColor: category.color, color: category.color, background: `${category.color}14` }}
+                          >
+                            <Icon className="size-5" />
+                          </span>
+                          <h3 className="font-display text-lg tracking-wide">{category.name}</h3>
+                        </div>
+                        <span className="font-mono text-xs text-[var(--muted)]">{count} active</span>
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{category.description}</p>
+                    </div>
+                  );
+                })}
               </div>
             </Panel>
 
-            <Panel title="Add Mission" description="Create a task with a category, schedule, priority, and XP reward.">
-              <TaskForm
-                input={taskInput}
-                categories={categories}
-                onChange={setTaskInput}
-                onSubmit={addTask}
+            <Panel icon={ScrollText} title="Campaign Ledger" description="Pending, scheduled, and conquered — in one scan.">
+              <TaskList
+                tasks={[...pendingTasks, ...completedTasks].slice(0, 12)}
+                categories={categoryById}
+                emptyText="No missions yet. Begin with one small, certain win."
+                onComplete={completeTask}
               />
             </Panel>
           </div>
         </section>
 
-        <section id="planner" className="mx-auto grid max-w-7xl gap-6 px-4 py-12 sm:px-6 lg:grid-cols-[0.8fr_1.2fr] lg:px-8">
-          <Panel title="Category Command" description="Hybrid labels keep the app clear without losing the game-like tone.">
-            <div className="grid gap-3">
-              {categories.map((category) => (
-                <div
-                  key={category.id}
-                  className="rounded-2xl border border-[var(--line)] bg-[rgba(244,241,232,0.03)] p-4"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <h3 className="font-semibold">{category.name}</h3>
-                    <span className="h-2 w-12 rounded-full" style={{ backgroundColor: category.color }} />
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{category.description}</p>
-                </div>
-              ))}
-            </div>
-          </Panel>
+        {/* Quests */}
+        <section id="quests" className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+          <SectionTitle
+            icon={Flame}
+            kicker="The Long Road"
+            title="Quests & Oaths"
+            subtitle="Repeatable rituals that build streaks and feed your momentum."
+          />
+          <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+            <Panel icon={Flame} title="Active Quests" description="Daily and weekly oaths that keep the fire burning.">
+              <div className="grid gap-3">
+                {habits.length === 0 ? (
+                  <EmptyState text="No quests yet. Swear an oath to start building a streak." />
+                ) : (
+                  habits.map((habit) => {
+                    const category = habit.category_id ? categoryById.get(habit.category_id) : null;
+                    const Icon = categoryIcon(habit.category_id);
+                    const completedToday = habit.last_completed_at?.slice(0, 10) === getTodayKey();
 
-          <Panel title="Planner" description="Pending, scheduled, and upcoming missions in one scan.">
-            <TaskList
-              tasks={[...pendingTasks, ...completedTasks].slice(0, 12)}
-              categories={categoryById}
-              emptyText="No missions yet. Start with one small win."
-              onComplete={completeTask}
-            />
-          </Panel>
-        </section>
-
-        <section id="quests" className="mx-auto grid max-w-7xl gap-6 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_0.9fr] lg:px-8">
-          <Panel title="Active Quests" description="Repeatable routines that build streaks and keep XP moving.">
-            <div className="grid gap-3">
-              {habits.length === 0 ? (
-                <EmptyState text="No quests yet. Add a recurring routine to start building a streak." />
-              ) : (
-                habits.map((habit) => {
-                  const category = habit.category_id ? categoryById.get(habit.category_id) : null;
-                  const completedToday = habit.last_completed_at?.slice(0, 10) === getTodayKey();
-
-                  return (
-                    <article
-                      key={habit.id}
-                      className="rounded-2xl border border-[var(--line)] bg-[rgba(244,241,232,0.03)] p-4"
-                    >
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <p className="font-semibold">{habit.title}</p>
-                          <p className="mt-1 text-sm text-[var(--muted)]">
-                            {category?.name ?? "Unassigned"} - {cadenceLabels[habit.cadence]} - {habit.xp_value} XP
-                          </p>
-                        </div>
-                        <button
-                          disabled={completedToday}
-                          onClick={() => completeHabit(habit)}
-                          className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-bold text-[#16130b] disabled:cursor-not-allowed disabled:bg-[#34382c] disabled:text-[var(--muted)]"
-                        >
-                          {completedToday ? "Complete Today" : "Log Quest"}
-                        </button>
-                      </div>
-                    </article>
-                  );
-                })
-              )}
-            </div>
-          </Panel>
-
-          <Panel title="Add Quest" description="Use quests for habits, rituals, and recurring maintenance.">
-            <HabitForm
-              input={habitInput}
-              categories={categories}
-              onChange={setHabitInput}
-              onSubmit={addHabit}
-            />
-          </Panel>
-        </section>
-
-        <section id="analytics" className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <Panel title="Analytics" description="Simple feedback loops that show where the week is going.">
-            <div className="grid gap-5 lg:grid-cols-3">
-              <div className="rounded-2xl border border-[var(--line)] bg-[rgba(244,241,232,0.03)] p-5">
-                <h3 className="font-semibold">Recent XP</h3>
-                <div className="mt-5 grid gap-3">
-                  {xpEvents.slice(0, 6).map((event) => (
-                    <div key={event.id} className="flex items-center justify-between gap-4 text-sm">
-                      <span className="truncate text-[var(--muted)]">{event.description}</span>
-                      <span className="font-mono text-[var(--accent)]">+{event.points}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-[var(--line)] bg-[rgba(244,241,232,0.03)] p-5">
-                <h3 className="font-semibold">Category Load</h3>
-                <div className="mt-5 grid gap-3">
-                  {categories.map((category) => {
-                    const count = tasks.filter((task) => task.category_id === category.id).length;
                     return (
-                      <div key={category.id} className="flex items-center justify-between text-sm">
-                        <span className="text-[var(--muted)]">{category.name}</span>
-                        <span className="font-mono">{count}</span>
-                      </div>
+                      <article
+                        key={habit.id}
+                        className={`frame-corners hover-lift rounded-md border p-4 ${completedToday ? "border-[var(--success)]/40 bg-[rgba(155,176,102,0.07)]" : "border-[var(--line)] bg-[rgba(28,24,16,0.55)]"}`}
+                      >
+                        <span className="corner tr" />
+                        <span className="corner bl" />
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="flex size-10 items-center justify-center rounded-md border border-[var(--line-strong)] text-[var(--gold)]">
+                              <Icon className="size-5" />
+                            </span>
+                            <div>
+                              <p className="font-display text-lg tracking-wide">{habit.title}</p>
+                              <p className="mt-0.5 font-mono text-xs text-[var(--muted)]">
+                                {category?.name ?? "Unassigned"} · {cadenceLabels[habit.cadence]} · {habit.xp_value} XP
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            disabled={completedToday}
+                            onClick={() => completeHabit(habit)}
+                            className="btn-gold inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold"
+                          >
+                            {completedToday ? (
+                              <>
+                                <Check className="size-4" /> Fulfilled
+                              </>
+                            ) : (
+                              <>
+                                <Flame className="size-4" /> Fulfill
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </article>
                     );
-                  })}
-                </div>
+                  })
+                )}
               </div>
-              <div className="rounded-2xl border border-[var(--line)] bg-[rgba(244,241,232,0.03)] p-5">
-                <h3 className="font-semibold">Achievement Track</h3>
-                <div className="mt-5 grid gap-3">
-                  {unlockedAchievements.slice(0, 3).map((achievement) => (
-                    <div key={achievement.id} className="rounded-xl bg-[rgba(214,168,79,0.1)] p-3">
-                      <p className="text-sm font-semibold text-[var(--accent)]">{achievement.name}</p>
+            </Panel>
+
+            <Panel icon={Plus} title="Swear an Oath" description="Quests are habits, rituals, and recurring upkeep.">
+              <HabitForm input={habitInput} categories={categories} onChange={setHabitInput} onSubmit={addHabit} />
+            </Panel>
+          </div>
+        </section>
+
+        {/* Analytics */}
+        <section id="analytics" className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+          <SectionTitle
+            icon={TrendingUp}
+            kicker="The Chronicle"
+            title="Records of the Realm"
+            subtitle="Feedback loops that show where the week is heading."
+          />
+          <div className="grid gap-6 lg:grid-cols-3">
+            <Panel icon={Sparkles} title="Recent Glory" description="The latest XP your blade has earned.">
+              <div className="grid gap-3">
+                {xpEvents.slice(0, 7).map((event) => (
+                  <div
+                    key={event.id}
+                    className="flex items-center justify-between gap-4 rounded-md border border-[var(--line)] bg-[rgba(28,24,16,0.5)] px-3 py-2.5 text-sm"
+                  >
+                    <span className="truncate text-[var(--muted)]">{event.description}</span>
+                    <span className="font-mono font-semibold text-[var(--gold)]">+{event.points}</span>
+                  </div>
+                ))}
+                {xpEvents.length === 0 ? <EmptyState text="No deeds recorded yet." /> : null}
+              </div>
+            </Panel>
+
+            <Panel icon={Compass} title="Battlefronts" description="Where your effort is concentrated.">
+              <div className="grid gap-3">
+                {categories.map((category) => {
+                  const count = tasks.filter((task) => task.category_id === category.id).length;
+                  const max = Math.max(1, ...categories.map((c) => tasks.filter((t) => t.category_id === c.id).length));
+                  const width = Math.round((count / max) * 100);
+                  return (
+                    <div key={category.id}>
+                      <div className="mb-1.5 flex items-center justify-between text-sm">
+                        <span className="text-[var(--muted)]">{category.name}</span>
+                        <span className="font-mono text-xs text-[var(--muted)]">{count}</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-[#0b0907]">
+                        <div className="h-full rounded-full" style={{ width: `${width}%`, backgroundColor: category.color }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Panel>
+
+            <Panel icon={Award} title="Trophies Won" description="Achievements already claimed.">
+              <div className="grid gap-3">
+                {unlockedAchievements.slice(0, 4).map((achievement) => (
+                  <div
+                    key={achievement.id}
+                    className="flex items-start gap-3 rounded-md border border-[var(--gold)]/30 bg-[rgba(224,178,76,0.08)] p-3"
+                  >
+                    <Trophy className="mt-0.5 size-5 shrink-0 text-[var(--gold)]" />
+                    <div>
+                      <p className="font-display text-sm tracking-wide text-[var(--gold-bright)]">{achievement.name}</p>
                       <p className="mt-1 text-xs leading-5 text-[var(--muted)]">{achievement.description}</p>
                     </div>
-                  ))}
-                  {unlockedAchievements.length === 0 ? <EmptyState text="Complete missions to unlock badges." /> : null}
+                  </div>
+                ))}
+                {unlockedAchievements.length === 0 ? <EmptyState text="Win battles to claim your first trophy." /> : null}
+              </div>
+            </Panel>
+          </div>
+        </section>
+
+        {/* Profile */}
+        <section id="profile" className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+          <SectionTitle
+            icon={Crown}
+            kicker="The Wanderer"
+            title="Your Legend"
+            subtitle="Your standing, your streaks, and the trophies yet to claim."
+          />
+          <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
+            <Panel icon={Shield} title="Character Sheet" description="Parker's standing across the realm.">
+              <div className="flex items-center gap-4">
+                <div className="relative flex size-20 items-center justify-center rounded-xl border border-[var(--gold)]/60 bg-[rgba(224,178,76,0.1)]">
+                  <span
+                    className="absolute inset-0 rounded-xl opacity-40"
+                    style={{ backgroundImage: "url('/art/crest.png')", backgroundSize: "cover", backgroundPosition: "center" }}
+                  />
+                  <span className="relative font-display text-3xl font-black text-[var(--gold-bright)]">
+                    {profile.avatar_initials}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-display text-2xl tracking-wide">{profile.display_name}</h3>
+                  <p className="mt-1 flex items-center gap-1.5 text-sm text-[var(--gold)]">
+                    <Crown className="size-4" /> Level {levelProgress.level} · {rank.name}
+                  </p>
                 </div>
               </div>
-            </div>
-          </Panel>
+              <div className="mt-6 grid gap-2.5 text-sm">
+                <LegendRow icon={Sparkles} label="Total XP" value={String(profile.total_xp)} />
+                <LegendRow icon={Flame} label="Current streak" value={`${profile.current_streak} days`} />
+                <LegendRow icon={TrendingUp} label="Longest streak" value={`${profile.longest_streak} days`} />
+                <LegendRow icon={Compass} label="Account" value={session?.user.email ?? "Demo preview"} />
+              </div>
+            </Panel>
+
+            <Panel icon={Trophy} title="Trophies & Bounties" description="Achievements give every march a reason.">
+              <div className="grid gap-3 md:grid-cols-2">
+                {[...unlockedAchievements, ...nextAchievements].slice(0, 6).map((achievement) => {
+                  const unlocked = unlockedAchievements.some((item) => item.id === achievement.id);
+                  return (
+                    <article
+                      key={achievement.id}
+                      className={`hover-lift rounded-md border p-4 ${unlocked ? "border-[var(--gold)]/40 bg-[rgba(224,178,76,0.07)]" : "border-[var(--line)] bg-[rgba(28,24,16,0.5)]"}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {unlocked ? (
+                          <Trophy className="size-4 text-[var(--gold)]" />
+                        ) : (
+                          <Lock className="size-4 text-[var(--muted-2)]" />
+                        )}
+                        <p className={`font-display tracking-wide ${unlocked ? "text-[var(--gold-bright)]" : "text-[var(--foreground)]"}`}>
+                          {achievement.name}
+                        </p>
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{achievement.description}</p>
+                      <p className="mt-3 font-mono text-xs text-[var(--muted-2)]">
+                        {unlocked ? "Claimed" : `Target ${achievement.unlock_threshold}`} · +{achievement.xp_bonus} XP
+                      </p>
+                    </article>
+                  );
+                })}
+              </div>
+            </Panel>
+          </div>
         </section>
 
-        <section id="profile" className="mx-auto grid max-w-7xl gap-6 px-4 py-12 sm:px-6 lg:grid-cols-[0.8fr_1.2fr] lg:px-8">
-          <Panel title="Profile" description="Parker's RPG card, current standing, and account state.">
-            <div className="flex items-center gap-4">
-              <div className="flex size-20 items-center justify-center rounded-3xl border border-[var(--accent)] bg-[rgba(214,168,79,0.12)] text-3xl font-black text-[var(--accent)]">
-                {profile.avatar_initials}
-              </div>
-              <div>
-                <h3 className="text-2xl font-semibold">{profile.display_name}</h3>
-                <p className="mt-1 text-sm text-[var(--muted)]">
-                  Level {levelProgress.level} {rank.name}
-                </p>
-              </div>
-            </div>
-            <div className="mt-6 grid gap-3 text-sm text-[var(--muted)]">
-              <p>Total XP: {profile.total_xp}</p>
-              <p>Current streak: {profile.current_streak} days</p>
-              <p>Longest streak: {profile.longest_streak} days</p>
-              <p>Account: {session?.user.email ?? "Demo preview"}</p>
-            </div>
-          </Panel>
-
-          <Panel title="Next Unlocks" description="Achievements give the system a reason to keep returning.">
-            <div className="grid gap-3 md:grid-cols-2">
-              {[...nextAchievements, ...unlockedAchievements].slice(0, 6).map((achievement) => {
-                const unlocked = unlockedAchievements.some((item) => item.id === achievement.id);
-                return (
-                  <article
-                    key={achievement.id}
-                    className="rounded-2xl border border-[var(--line)] bg-[rgba(244,241,232,0.03)] p-4"
-                  >
-                    <p className={unlocked ? "font-semibold text-[var(--accent)]" : "font-semibold"}>
-                      {achievement.name}
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{achievement.description}</p>
-                    <p className="mt-3 font-mono text-xs text-[var(--muted)]">
-                      {unlocked ? "Unlocked" : `${achievement.unlock_threshold} target`} - +{achievement.xp_bonus} XP
-                    </p>
-                  </article>
-                );
-              })}
-            </div>
-          </Panel>
-        </section>
+        <footer className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
+          <div className="gold-rule mb-6" />
+          <p className="text-center font-display text-sm tracking-[0.2em] text-[var(--muted-2)]">
+            THE LONG ROAD · PARKER&apos;S PRODUCTIVITY PROGRAM
+          </p>
+        </footer>
       </div>
     </main>
+  );
+}
+
+function SiteHeader({
+  isDemoMode,
+  isSignedIn,
+  onSignOut,
+}: {
+  isDemoMode: boolean;
+  isSignedIn: boolean;
+  onSignOut: () => void;
+}) {
+  return (
+    <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-[rgba(10,9,7,0.82)] backdrop-blur-xl">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <a href="#dashboard" className="group flex items-center gap-3">
+          <span
+            className="size-11 shrink-0 rounded-md border border-[var(--gold)]/40"
+            style={{ backgroundImage: "url('/art/crest.png')", backgroundSize: "cover", backgroundPosition: "center" }}
+          />
+          <span className="leading-tight">
+            <span className="block font-mono text-[10px] uppercase tracking-[0.28em] text-[var(--gold)]">Parker System</span>
+            <span className="font-display text-lg tracking-wide">The Long Road</span>
+          </span>
+        </a>
+        <nav className="hidden items-center gap-7 font-display text-sm tracking-wide text-[var(--muted)] md:flex">
+          <a href="#dashboard" className="hover:text-[var(--gold-bright)]">War Table</a>
+          <a href="#planner" className="hover:text-[var(--gold-bright)]">Map</a>
+          <a href="#quests" className="hover:text-[var(--gold-bright)]">Quests</a>
+          <a href="#analytics" className="hover:text-[var(--gold-bright)]">Chronicle</a>
+          <a href="#profile" className="hover:text-[var(--gold-bright)]">Legend</a>
+        </nav>
+        <div className="flex items-center gap-3">
+          <span className="hidden items-center gap-1.5 rounded-full border border-[var(--line)] px-3 py-1 font-mono text-[11px] text-[var(--muted)] sm:inline-flex">
+            <span className={`size-1.5 rounded-full ${isDemoMode ? "bg-[var(--ember)]" : "bg-[var(--success)]"}`} />
+            {isDemoMode ? "Demo Mode" : "Live Sync"}
+          </span>
+          {isSignedIn ? (
+            <button onClick={onSignOut} className="btn-ghost rounded-md px-4 py-2 text-sm font-semibold">
+              Sign Out
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+type HeroProps = {
+  profile: Profile;
+  rank: string;
+  levelProgress: ReturnType<typeof getLevelProgress>;
+  message: string;
+  dailyDone: number;
+  dailyTarget: number;
+  dailyProgress: number;
+  authMode: "signin" | "signup";
+  email: string;
+  password: string;
+  isLoading: boolean;
+  hasSupabase: boolean;
+  isSignedIn: boolean;
+  onAuthModeChange: (mode: "signin" | "signup") => void;
+  onEmailChange: (value: string) => void;
+  onPasswordChange: (value: string) => void;
+  onSubmit: () => void;
+};
+
+function Hero(props: HeroProps) {
+  const { profile, rank, levelProgress, message, dailyProgress, dailyDone, dailyTarget } = props;
+
+  return (
+    <section className="relative overflow-hidden">
+      <div
+        className="absolute inset-0 z-0"
+        style={{ backgroundImage: "url('/art/hero-vista.png')", backgroundSize: "cover", backgroundPosition: "center 35%" }}
+      />
+      <div className="absolute inset-0 z-0 bg-gradient-to-b from-[rgba(10,9,7,0.55)] via-[rgba(10,9,7,0.78)] to-[var(--background)]" />
+      <div className="absolute inset-0 z-0 bg-gradient-to-r from-[rgba(10,9,7,0.85)] via-transparent to-[rgba(10,9,7,0.55)]" />
+
+      <div className="relative z-10 mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-24">
+        <div className="rise flex flex-col justify-center">
+          <p className="eyebrow mb-5 flex items-center gap-2">
+            <Compass className="size-3.5" /> Personal Command Center
+          </p>
+          <h1 className="max-w-3xl font-display text-5xl font-black leading-[0.98] tracking-tight text-[#f7f1df] drop-shadow-[0_2px_24px_rgba(0,0,0,0.8)] sm:text-6xl lg:text-7xl">
+            Rise, <span className="text-gold-gradient">Wanderer</span>.<br />
+            Walk the Long Road.
+          </h1>
+          <p className="mt-6 max-w-xl text-lg leading-8 text-[#d8cfb8]">
+            Schedule the day, fell your missions, swear your oaths, and earn the XP that turns small wins into
+            relentless momentum.
+          </p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <a href="#dashboard" className="btn-gold inline-flex items-center justify-center gap-2 rounded-md px-7 py-3.5 text-sm font-bold">
+              <Swords className="size-4" /> Enter the War Table
+            </a>
+            <a href="#quests" className="btn-ghost inline-flex items-center justify-center gap-2 rounded-md px-7 py-3.5 text-sm font-bold">
+              <Flame className="size-4" /> Swear an Oath
+            </a>
+          </div>
+          <p className="mt-6 flex items-center gap-2 text-sm text-[var(--muted)]">
+            <Sparkles className="size-4 text-[var(--gold)]" /> {message}
+          </p>
+        </div>
+
+        <aside className="rise frame frame-corners rounded-lg p-6 shadow-2xl shadow-black/50 backdrop-blur-md">
+          <span className="corner tr" />
+          <span className="corner bl" />
+          <div className="mb-6 flex items-center justify-between border-b border-[var(--line)] pb-5">
+            <div>
+              <p className="eyebrow">Operator</p>
+              <h2 className="mt-1 font-display text-2xl tracking-wide">{profile.display_name}</h2>
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-[var(--gold)]">
+                <Crown className="size-4" /> {rank}
+              </p>
+            </div>
+            <div
+              className="relative flex size-20 items-center justify-center rounded-xl border border-[var(--gold)]/60"
+              style={{ backgroundImage: "url('/art/crest.png')", backgroundSize: "cover", backgroundPosition: "center" }}
+            >
+              <span className="absolute inset-0 rounded-xl bg-black/30" />
+              <span className="relative font-display text-3xl font-black text-[var(--gold-bright)] drop-shadow">
+                {profile.avatar_initials}
+              </span>
+            </div>
+          </div>
+
+          {/* Momentum meter */}
+          <div className="mb-5 flex items-center gap-4 rounded-md border border-[var(--ember)]/30 bg-[rgba(217,120,67,0.08)] p-4">
+            <Flame className="flame-glow size-9 text-[var(--flame)]" />
+            <div className="flex-1">
+              <p className="eyebrow text-[var(--ember-bright)]">Momentum</p>
+              <p className="font-display text-2xl tracking-wide">
+                {profile.current_streak}-Day Streak
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="font-mono text-xs text-[var(--muted)]">Best</p>
+              <p className="font-display text-xl text-[var(--gold)]">{profile.longest_streak}d</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <MiniStat label="Level" value={String(levelProgress.level)} />
+            <MiniStat label="Total XP" value={String(profile.total_xp)} />
+            <MiniStat label="To Next" value={String(levelProgress.remainingXp)} />
+          </div>
+
+          <div className="mt-5">
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="text-[var(--muted)]">Level progress</span>
+              <span className="font-mono text-[var(--gold)]">{Math.round(levelProgress.progress)}%</span>
+            </div>
+            <div className="xp-track h-3.5">
+              <div className="xp-fill" style={{ width: `${levelProgress.progress}%` }} />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="text-[var(--muted)]">Today&apos;s focus</span>
+              <span className="font-mono text-[var(--gold)]">{dailyDone}/{dailyTarget}</span>
+            </div>
+            <div className="xp-track h-3.5">
+              <div className="xp-fill" style={{ width: `${dailyProgress}%` }} />
+            </div>
+          </div>
+
+          <AuthPanel
+            authMode={props.authMode}
+            email={props.email}
+            password={props.password}
+            isLoading={props.isLoading}
+            hasSupabase={props.hasSupabase}
+            isSignedIn={props.isSignedIn}
+            onAuthModeChange={props.onAuthModeChange}
+            onEmailChange={props.onEmailChange}
+            onPasswordChange={props.onPasswordChange}
+            onSubmit={props.onSubmit}
+          />
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+function CelebrationOverlay({ celebration }: { celebration: Celebration }) {
+  const Icon = celebration.tone === "crown" ? Crown : celebration.tone === "ember" ? Flame : Swords;
+  return (
+    <div className="celebrate">
+      <div className="celebrate-text">
+        <Icon className="mx-auto mb-3 size-16 text-[var(--gold-bright)] drop-shadow-[0_0_24px_rgba(246,213,122,0.8)]" />
+        <p className="text-gold-gradient text-5xl font-black tracking-[0.15em] drop-shadow-[0_2px_30px_rgba(0,0,0,0.9)] sm:text-7xl">
+          {celebration.title}
+        </p>
+        <p className="mt-3 font-display text-xl tracking-[0.3em] text-[#e8dcc0]">{celebration.subtitle}</p>
+      </div>
+    </div>
+  );
+}
+
+function SectionTitle({
+  icon: Icon,
+  kicker,
+  title,
+  subtitle,
+}: {
+  icon: LucideIcon;
+  kicker: string;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <div className="mb-7">
+      <p className="eyebrow mb-2 flex items-center gap-2">
+        <Icon className="size-3.5" /> {kicker}
+      </p>
+      <h2 className="font-display text-3xl font-bold tracking-tight text-[#f4ecd6] sm:text-4xl">{title}</h2>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">{subtitle}</p>
+      <div className="gold-rule mt-5" />
+    </div>
   );
 }
 
@@ -878,51 +1200,47 @@ function AuthPanel({
 }) {
   if (isSignedIn) {
     return (
-      <div className="mt-6 rounded-2xl border border-[var(--line)] bg-[rgba(134,169,107,0.08)] p-4 text-sm text-[var(--muted)]">
-        Live account mode is active. Your missions, quests, XP, and profile sync through Supabase.
+      <div className="mt-6 flex items-start gap-2.5 rounded-md border border-[var(--success)]/30 bg-[rgba(155,176,102,0.08)] p-4 text-sm text-[var(--muted)]">
+        <Shield className="mt-0.5 size-4 shrink-0 text-[var(--success)]" />
+        <span>Live account mode is active. Your missions, quests, XP, and legend sync through Supabase.</span>
       </div>
     );
   }
 
   return (
-    <div className="mt-6 rounded-2xl border border-[var(--line)] bg-[rgba(244,241,232,0.03)] p-4">
-      <div className="mb-4 flex rounded-full border border-[var(--line)] p-1 text-sm">
+    <div className="mt-6 rounded-md border border-[var(--line)] bg-[rgba(8,7,5,0.5)] p-4">
+      <div className="mb-4 flex rounded-md border border-[var(--line)] p-1 font-display text-sm tracking-wide">
         <button
           onClick={() => onAuthModeChange("signin")}
-          className={`flex-1 rounded-full px-3 py-2 ${authMode === "signin" ? "bg-[var(--accent)] text-[#16130b]" : "text-[var(--muted)]"}`}
+          className={`flex-1 rounded px-3 py-2 ${authMode === "signin" ? "btn-gold" : "text-[var(--muted)]"}`}
         >
-          Sign In
+          Enter
         </button>
         <button
           onClick={() => onAuthModeChange("signup")}
-          className={`flex-1 rounded-full px-3 py-2 ${authMode === "signup" ? "bg-[var(--accent)] text-[#16130b]" : "text-[var(--muted)]"}`}
+          className={`flex-1 rounded px-3 py-2 ${authMode === "signup" ? "btn-gold" : "text-[var(--muted)]"}`}
         >
-          Sign Up
+          Begin
         </button>
       </div>
       <div className="grid gap-3">
         <Field label="Email">
-          <input
-            value={email}
-            onChange={(event) => onEmailChange(event.target.value)}
-            type="email"
-            className="w-full rounded-xl border border-[var(--line)] bg-[#10130e] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
-          />
+          <input value={email} onChange={(event) => onEmailChange(event.target.value)} type="email" className="field-input" />
         </Field>
         <Field label="Password">
           <input
             value={password}
             onChange={(event) => onPasswordChange(event.target.value)}
             type="password"
-            className="w-full rounded-xl border border-[var(--line)] bg-[#10130e] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            className="field-input"
           />
         </Field>
         <button
           disabled={isLoading || !hasSupabase}
           onClick={onSubmit}
-          className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-bold text-[#16130b] disabled:cursor-not-allowed disabled:bg-[#34382c] disabled:text-[var(--muted)]"
+          className="btn-gold mt-1 inline-flex items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-bold"
         >
-          {hasSupabase ? (isLoading ? "Working" : "Continue") : "Add Supabase Env Vars"}
+          {hasSupabase ? (isLoading ? "Working" : "Continue the Road") : "Bind Supabase Env Vars"}
         </button>
       </div>
     </div>
@@ -930,31 +1248,80 @@ function AuthPanel({
 }
 
 function Panel({
+  icon: Icon,
   title,
   description,
   children,
 }: {
+  icon: LucideIcon;
   title: string;
   description: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[28px] border border-[var(--line)] bg-[rgba(21,24,18,0.86)] p-5 shadow-xl shadow-black/20 sm:p-6">
-      <div className="mb-5 max-w-2xl">
-        <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
-        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{description}</p>
+    <div className="frame frame-corners rounded-lg p-5 shadow-xl shadow-black/30 sm:p-6">
+      <span className="corner tr" />
+      <span className="corner bl" />
+      <div className="mb-5 flex items-start gap-3">
+        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md border border-[var(--gold)]/40 bg-[rgba(224,178,76,0.08)] text-[var(--gold)]">
+          <Icon className="size-5" />
+        </span>
+        <div className="max-w-2xl">
+          <h2 className="font-display text-xl font-bold tracking-wide">{title}</h2>
+          <p className="mt-1 text-sm leading-6 text-[var(--muted)]">{description}</p>
+        </div>
       </div>
       {children}
     </div>
   );
 }
 
-function StatCard({ label, value, detail }: StatCardProps) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  detail: string;
+  tone: "gold" | "ember";
+}) {
+  const color = tone === "ember" ? "var(--ember-bright)" : "var(--gold)";
   return (
-    <div className="rounded-2xl border border-[var(--line)] bg-[rgba(244,241,232,0.035)] p-4">
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--muted)]">{label}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-tight">{value}</p>
+    <div className="frame-corners hover-lift rounded-lg border border-[var(--line)] bg-[rgba(28,24,16,0.6)] p-5">
+      <span className="corner tr" />
+      <span className="corner bl" />
+      <div className="flex items-center justify-between">
+        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--muted)]">{label}</p>
+        <Icon className="size-5" style={{ color }} />
+      </div>
+      <p className="mt-3 font-display text-4xl font-black tracking-tight" style={{ color }}>
+        {value}
+      </p>
       <p className="mt-1 text-sm text-[var(--muted)]">{detail}</p>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-[var(--line)] bg-[rgba(8,7,5,0.45)] p-3 text-center">
+      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">{label}</p>
+      <p className="mt-1 font-display text-xl font-bold text-[var(--gold-bright)]">{value}</p>
+    </div>
+  );
+}
+
+function LegendRow({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between rounded-md border border-[var(--line)] bg-[rgba(28,24,16,0.45)] px-3 py-2.5">
+      <span className="flex items-center gap-2 text-[var(--muted)]">
+        <Icon className="size-4 text-[var(--gold)]" /> {label}
+      </span>
+      <span className="font-mono text-sm text-[var(--foreground)]">{value}</span>
     </div>
   );
 }
@@ -978,33 +1345,50 @@ function TaskList({
     <div className="grid gap-3">
       {tasks.map((task) => {
         const category = task.category_id ? categories.get(task.category_id) : null;
+        const Icon = categoryIcon(task.category_id);
+        const done = task.status === "completed";
         return (
           <article
             key={task.id}
-            className="rounded-2xl border border-[var(--line)] bg-[rgba(244,241,232,0.03)] p-4"
+            className={`frame-corners hover-lift rounded-md border p-4 ${done ? "border-[var(--line)] bg-[rgba(8,7,5,0.4)] opacity-70" : "border-[var(--line)] bg-[rgba(28,24,16,0.55)]"}`}
           >
+            <span className="corner tr" />
+            <span className="corner bl" />
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className={task.status === "completed" ? "font-semibold text-[var(--muted)] line-through" : "font-semibold"}>
-                    {task.title}
-                  </h3>
-                  <span className={`rounded-full border px-2 py-0.5 font-mono text-[11px] ${priorityStyles[task.priority]}`}>
-                    {task.priority}
-                  </span>
+              <div className="flex min-w-0 gap-3">
+                <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md border border-[var(--line-strong)] text-[var(--gold)]">
+                  <Icon className="size-4.5" />
+                </span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className={`font-display text-base tracking-wide ${done ? "text-[var(--muted)] line-through" : ""}`}>
+                      {task.title}
+                    </h3>
+                    <span className={`rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide ${priorityStyles[task.priority]}`}>
+                      {priorityLabel[task.priority]}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 font-mono text-xs text-[var(--muted)]">
+                    {category?.name ?? "Unassigned"} · {task.xp_value} XP
+                    {task.due_at ? ` · Due ${new Date(task.due_at).toLocaleDateString()}` : ""}
+                  </p>
+                  {task.notes ? <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{task.notes}</p> : null}
                 </div>
-                <p className="mt-2 text-sm text-[var(--muted)]">
-                  {category?.name ?? "Unassigned"} - {task.xp_value} XP
-                  {task.due_at ? ` - Due ${new Date(task.due_at).toLocaleDateString()}` : ""}
-                </p>
-                {task.notes ? <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{task.notes}</p> : null}
               </div>
               <button
-                disabled={task.status === "completed"}
+                disabled={done}
                 onClick={() => onComplete(task)}
-                className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-bold text-[#16130b] disabled:cursor-not-allowed disabled:bg-[#34382c] disabled:text-[var(--muted)]"
+                className="btn-gold inline-flex shrink-0 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold"
               >
-                {task.status === "completed" ? "Complete" : "Finish"}
+                {done ? (
+                  <>
+                    <Check className="size-4" /> Felled
+                  </>
+                ) : (
+                  <>
+                    <Swords className="size-4" /> Fell It
+                  </>
+                )}
               </button>
             </div>
           </article>
@@ -1030,16 +1414,17 @@ function TaskForm({
       <Field label="Mission title">
         <input
           value={input.title}
+          placeholder="Ship the portfolio update…"
           onChange={(event) => onChange({ ...input, title: event.target.value })}
-          className="w-full rounded-xl border border-[var(--line)] bg-[#10130e] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+          className="field-input"
         />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Category">
+        <Field label="Domain">
           <select
             value={input.category_id}
             onChange={(event) => onChange({ ...input, category_id: event.target.value })}
-            className="w-full rounded-xl border border-[var(--line)] bg-[#10130e] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            className="field-input"
           >
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
@@ -1048,16 +1433,16 @@ function TaskForm({
             ))}
           </select>
         </Field>
-        <Field label="Priority">
+        <Field label="Stakes">
           <select
             value={input.priority}
             onChange={(event) => onChange({ ...input, priority: event.target.value as Priority })}
-            className="w-full rounded-xl border border-[var(--line)] bg-[#10130e] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            className="field-input"
           >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="critical">Critical</option>
+            <option value="low">Skirmish</option>
+            <option value="medium">Mission</option>
+            <option value="high">Vanguard</option>
+            <option value="critical">Boss Fight</option>
           </select>
         </Field>
       </div>
@@ -1067,7 +1452,7 @@ function TaskForm({
             type="datetime-local"
             value={input.due_at}
             onChange={(event) => onChange({ ...input, due_at: event.target.value })}
-            className="w-full rounded-xl border border-[var(--line)] bg-[#10130e] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            className="field-input"
           />
         </Field>
         <Field label="Schedule date">
@@ -1075,30 +1460,31 @@ function TaskForm({
             type="date"
             value={input.scheduled_for}
             onChange={(event) => onChange({ ...input, scheduled_for: event.target.value })}
-            className="w-full rounded-xl border border-[var(--line)] bg-[#10130e] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            className="field-input"
           />
         </Field>
-        <Field label="XP reward">
+        <Field label="XP bounty">
           <input
             type="number"
             min="5"
             step="5"
             value={input.xp_value}
             onChange={(event) => onChange({ ...input, xp_value: Number(event.target.value) })}
-            className="w-full rounded-xl border border-[var(--line)] bg-[#10130e] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            className="field-input"
           />
         </Field>
       </div>
       <Field label="Notes">
         <textarea
           value={input.notes}
+          placeholder="The smallest visible step to victory…"
           onChange={(event) => onChange({ ...input, notes: event.target.value })}
           rows={3}
-          className="w-full rounded-xl border border-[var(--line)] bg-[#10130e] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+          className="field-input"
         />
       </Field>
-      <button onClick={onSubmit} className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-bold text-[#16130b]">
-        Add Mission
+      <button onClick={onSubmit} className="btn-gold inline-flex items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-bold">
+        <Plus className="size-4" /> Inscribe Mission
       </button>
     </div>
   );
@@ -1120,16 +1506,17 @@ function HabitForm({
       <Field label="Quest title">
         <input
           value={input.title}
+          placeholder="Train the body…"
           onChange={(event) => onChange({ ...input, title: event.target.value })}
-          className="w-full rounded-xl border border-[var(--line)] bg-[#10130e] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+          className="field-input"
         />
       </Field>
       <div className="grid gap-4 sm:grid-cols-3">
-        <Field label="Category">
+        <Field label="Domain">
           <select
             value={input.category_id}
             onChange={(event) => onChange({ ...input, category_id: event.target.value })}
-            className="w-full rounded-xl border border-[var(--line)] bg-[#10130e] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            className="field-input"
           >
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
@@ -1142,26 +1529,26 @@ function HabitForm({
           <select
             value={input.cadence}
             onChange={(event) => onChange({ ...input, cadence: event.target.value as HabitCadence })}
-            className="w-full rounded-xl border border-[var(--line)] bg-[#10130e] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            className="field-input"
           >
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="custom">Custom</option>
           </select>
         </Field>
-        <Field label="XP reward">
+        <Field label="XP bounty">
           <input
             type="number"
             min="5"
             step="5"
             value={input.xp_value}
             onChange={(event) => onChange({ ...input, xp_value: Number(event.target.value) })}
-            className="w-full rounded-xl border border-[var(--line)] bg-[#10130e] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            className="field-input"
           />
         </Field>
       </div>
-      <button onClick={onSubmit} className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-bold text-[#16130b]">
-        Add Quest
+      <button onClick={onSubmit} className="btn-gold inline-flex items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-bold">
+        <Flame className="size-4" /> Swear the Oath
       </button>
     </div>
   );
@@ -1170,7 +1557,7 @@ function HabitForm({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="grid gap-2 text-sm font-medium text-[var(--foreground)]">
-      <span>{label}</span>
+      <span className="font-mono text-xs uppercase tracking-[0.12em] text-[var(--muted)]">{label}</span>
       {children}
     </label>
   );
@@ -1178,7 +1565,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[rgba(244,241,232,0.025)] p-5 text-sm leading-6 text-[var(--muted)]">
+    <div className="flex items-center gap-3 rounded-md border border-dashed border-[var(--line)] bg-[rgba(8,7,5,0.35)] p-5 text-sm leading-6 text-[var(--muted)]">
+      <ChevronRight className="size-4 shrink-0 text-[var(--gold)]" />
       {text}
     </div>
   );
