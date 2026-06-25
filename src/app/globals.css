@@ -158,11 +158,34 @@ a:active {
 }
 
 .parchment-bg {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(67, 49, 20, 0.22), transparent 42%),
+    linear-gradient(180deg, var(--background-2), var(--background));
+  isolation: isolate;
+}
+
+.map-metal-backdrop {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.34;
   background-image:
-    linear-gradient(rgba(10, 9, 7, 0.82), rgba(10, 9, 7, 0.92)),
-    url("/art/parchment-texture.png");
-  background-size: cover, 820px;
-  background-attachment: fixed;
+    linear-gradient(rgba(10, 9, 7, 0.22), rgba(10, 9, 7, 0.36)),
+    url("/art/parchment-texture.webp");
+  background-size: cover, 860px auto;
+  background-position: center, center top;
+  background-repeat: no-repeat, repeat;
+  mix-blend-mode: screen;
+}
+
+.map-metal-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 20%, transparent 0%, rgba(10, 9, 7, 0.2) 58%, rgba(10, 9, 7, 0.82) 100%),
+    linear-gradient(90deg, rgba(10, 9, 7, 0.45), transparent 28%, transparent 72%, rgba(10, 9, 7, 0.45));
 }
 
 /* ---------- Ornamental frame (corner brackets) ---------- */

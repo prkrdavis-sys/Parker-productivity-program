@@ -17,6 +17,7 @@ import {
   Lock,
   type LucideIcon,
   Plus,
+  RotateCcw,
   ScrollText,
   Shield,
   Skull,
@@ -100,6 +101,62 @@ const cadenceLabels: Record<HabitCadence, string> = {
   custom: "Custom",
 };
 
+type GoalSuggestion = {
+  title: string;
+  notes: string;
+  categoryId: string;
+  priority: Priority;
+  xpValue: number;
+};
+
+type GoalRecommendation = {
+  categoryId: string;
+  priority: Priority;
+  xpValue: number;
+};
+
+const goalSuggestions: GoalSuggestion[] = demoTasks.map((task) => ({
+  title: task.title,
+  notes: task.notes ?? "",
+  categoryId: task.category_id ?? initialTaskInput.category_id,
+  priority: task.priority,
+  xpValue: task.xp_value,
+}));
+
+const priorityXp: Record<Priority, number> = {
+  low: 20,
+  medium: 35,
+  high: 60,
+  critical: 80,
+};
+
+const categorySignals: Array<{ categoryId: string; keywords: string[] }> = [
+  {
+    categoryId: "home-base",
+    keywords: ["clean", "clear", "counter", "kitchen", "laundry", "repair", "reset", "room", "trash"],
+  },
+  {
+    categoryId: "career-forge",
+    keywords: ["career", "client", "code", "deploy", "job", "portfolio", "project", "resume", "ship", "work"],
+  },
+  {
+    categoryId: "body",
+    keywords: ["body", "cardio", "exercise", "gym", "lift", "meal", "recovery", "run", "train", "walk", "workout"],
+  },
+  {
+    categoryId: "command-center",
+    keywords: ["admin", "bill", "budget", "calendar", "email", "finance", "inbox", "invoice", "plan", "review"],
+  },
+  {
+    categoryId: "skills",
+    keywords: ["book", "course", "learn", "lesson", "practice", "read", "skill", "study", "tutorial", "write"],
+  },
+  {
+    categoryId: "personal",
+    keywords: ["appointment", "call", "errand", "family", "friend", "personal", "rest", "social"],
+  },
+];
+
 const categoryIcons: Record<string, LucideIcon> = {
   "home-base": Tent,
   "career-forge": Hammer,
@@ -109,11 +166,226 @@ const categoryIcons: Record<string, LucideIcon> = {
   personal: Heart,
 };
 
+const glossaryTerms = [
+  {
+    term: "War Table",
+    kind: "Dashboard",
+    definition: "The day-at-a-glance command post: urgent missions, overdue threats, weekly XP, and total wins.",
+  },
+  {
+    term: "Mission",
+    kind: "Task",
+    definition: "A concrete one-time task with a finish line, a domain, a due time, and an XP reward.",
+  },
+  {
+    term: "Skirmish",
+    kind: "Low stakes",
+    definition: "A light mission. Useful for small chores, quick maintenance, and easy momentum.",
+  },
+  {
+    term: "Vanguard",
+    kind: "High stakes",
+    definition: "A high-priority mission that should lead the charge because it meaningfully moves the week forward.",
+  },
+  {
+    term: "Boss Fight",
+    kind: "Critical stakes",
+    definition: "The hardest or most urgent class of mission. These are the must-win battles with the biggest pressure.",
+  },
+  {
+    term: "Quest",
+    kind: "Habit",
+    definition: "A recurring practice, ritual, or upkeep loop that can be fulfilled daily, weekly, or on a custom cadence.",
+  },
+  {
+    term: "Oath",
+    kind: "Commitment",
+    definition: "The act of creating or keeping a quest. Swearing an oath means binding a recurring behavior to the road.",
+  },
+  {
+    term: "Career Forge",
+    kind: "Domain",
+    definition: "The domain for deep work, job growth, portfolio work, professional moves, and career momentum.",
+  },
+  {
+    term: "Home Base",
+    kind: "Domain",
+    definition: "The domain for house work, repairs, resets, and keeping your environment ready for the next march.",
+  },
+  {
+    term: "Command Center",
+    kind: "Domain",
+    definition: "The logistics domain: bills, planning, admin, calendar work, and closing loops before they sprawl.",
+  },
+  {
+    term: "Domain",
+    kind: "Category",
+    definition: "A territory of life where work belongs, such as Home Base, Career Forge, Body, Skills, or Personal.",
+  },
+  {
+    term: "Campaign Ledger",
+    kind: "Task list",
+    definition: "The wider roll of pending, scheduled, and conquered missions beyond the immediate War Table.",
+  },
+  {
+    term: "On the Horizon",
+    kind: "Upcoming work",
+    definition: "Missions that are scheduled ahead of today, visible early so they do not become surprise boss fights.",
+  },
+  {
+    term: "Battlefronts",
+    kind: "Analytics",
+    definition: "A scan of where active work is concentrated across domains so you can see which fronts are heating up.",
+  },
+  {
+    term: "Chronicle",
+    kind: "Records",
+    definition: "The record of recent glory: XP events, trophies, trends, and evidence that effort is compounding.",
+  },
+  {
+    term: "XP",
+    kind: "Progress",
+    definition: "Experience points earned by completing missions and fulfilling quests. XP drives levels and momentum.",
+  },
+  {
+    term: "Bounty",
+    kind: "Reward",
+    definition: "The XP value attached to a mission, quest, or trophy. Bigger stakes usually deserve a bigger bounty.",
+  },
+  {
+    term: "Fell It",
+    kind: "Action",
+    definition: "The completion action for a mission. When a task is finished, it is marked as felled and pays out XP.",
+  },
+  {
+    term: "Fulfill",
+    kind: "Action",
+    definition: "The completion action for a quest or oath. Fulfilling it records the ritual and feeds the streak.",
+  },
+  {
+    term: "Legend",
+    kind: "Profile",
+    definition: "Your character sheet: level, rank, streaks, account state, and the trophies still waiting to be claimed.",
+  },
+  {
+    term: "Rank",
+    kind: "Progress title",
+    definition: "A title earned through levels, from Recruit toward Operator, Captain, Commander, and Warden.",
+  },
+  {
+    term: "Momentum",
+    kind: "Streak",
+    definition: "The current run of days with recorded wins. It is the fire you keep alive by showing up repeatedly.",
+  },
+  {
+    term: "Trophies",
+    kind: "Achievements",
+    definition: "Milestones earned for wins, streaks, XP, and high-stakes completions. They mark proof of progress.",
+  },
+  {
+    term: "The Long Road",
+    kind: "System theme",
+    definition: "The whole productivity journey: small victories, recurring rituals, earned progress, and patient advancement.",
+  },
+  {
+    term: "Demo Mode",
+    kind: "Account state",
+    definition: "The preview state when Supabase is not bound or no one is signed in. The realm works locally for exploration.",
+  },
+  {
+    term: "Live Sync",
+    kind: "Account state",
+    definition: "The signed-in state where missions, quests, XP, and legend data are bound to Supabase.",
+  },
+] as const;
+
 function categoryIcon(id: string | null | undefined): LucideIcon {
   if (id && categoryIcons[id]) {
     return categoryIcons[id];
   }
   return ScrollText;
+}
+
+function selectAvailableCategory(categoryId: string, categories: TaskCategory[], fallbackCategoryId: string) {
+  if (categories.some((category) => category.id === categoryId)) {
+    return categoryId;
+  }
+
+  return categories[0]?.id ?? fallbackCategoryId;
+}
+
+function inferGoalCategory(text: string, categories: TaskCategory[], fallbackCategoryId: string) {
+  const normalized = text.toLowerCase();
+  const scoredCategories = categories.map((category) => {
+    const signal = categorySignals.find((item) => item.categoryId === category.id);
+    const directMatch = [category.name, category.slug, category.description]
+      .filter(Boolean)
+      .some((value) => normalized.includes(value.toLowerCase()));
+    const keywordScore = signal?.keywords.filter((keyword) => normalized.includes(keyword)).length ?? 0;
+
+    return {
+      id: category.id,
+      score: keywordScore + (directMatch ? 2 : 0),
+    };
+  });
+
+  const bestMatch = scoredCategories.sort((a, b) => b.score - a.score)[0];
+  if (bestMatch && bestMatch.score > 0) {
+    return bestMatch.id;
+  }
+
+  return selectAvailableCategory(fallbackCategoryId, categories, fallbackCategoryId);
+}
+
+function inferGoalPriority(text: string): Priority {
+  const normalized = text.toLowerCase();
+
+  if (/\b(urgent|critical|overdue|deadline|boss|must|tax|bill|invoice)\b/.test(normalized)) {
+    return "critical";
+  }
+
+  if (/\b(ship|finish|launch|deep work|portfolio|important|hard|proposal|build)\b/.test(normalized)) {
+    return "high";
+  }
+
+  if (/\b(quick|small|tiny|easy|minor|five minutes|5 minutes)\b/.test(normalized)) {
+    return "low";
+  }
+
+  return "medium";
+}
+
+function suggestGoalDetails(input: NewTaskInput, categories: TaskCategory[]): GoalRecommendation {
+  const text = `${input.title} ${input.notes}`.trim();
+
+  if (!text) {
+    return {
+      categoryId: selectAvailableCategory(input.category_id, categories, initialTaskInput.category_id),
+      priority: input.priority,
+      xpValue: input.xp_value,
+    };
+  }
+
+  const priority = inferGoalPriority(text);
+  const lengthBonus = text.length > 90 ? 10 : text.length > 45 ? 5 : 0;
+  const xpValue = Math.min(100, priorityXp[priority] + lengthBonus);
+
+  return {
+    categoryId: inferGoalCategory(text, categories, input.category_id || initialTaskInput.category_id),
+    priority,
+    xpValue,
+  };
+}
+
+function applyGoalAutomation(input: NewTaskInput, categories: TaskCategory[]): NewTaskInput {
+  const recommendation = suggestGoalDetails(input, categories);
+
+  return {
+    ...input,
+    category_id: recommendation.categoryId,
+    priority: recommendation.priority,
+    xp_value: recommendation.xpValue,
+  };
 }
 
 type Celebration = {
@@ -142,6 +414,7 @@ export function ProductivityApp() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("Demo mode is active until the realm is bound to Supabase.");
   const [celebration, setCelebration] = useState<Celebration | null>(null);
+  const [confirmingTaskId, setConfirmingTaskId] = useState<string | null>(null);
 
   const isDemoMode = !supabase || !session;
 
@@ -427,7 +700,7 @@ export function ProductivityApp() {
       currentTask.id === task.id ? { ...currentTask, status: "completed" as const } : currentTask,
     );
 
-    await persistCompletion({
+    const didPersist = await persistCompletion({
       completion,
       event,
       profileDelta: task.xp_value,
@@ -456,6 +729,11 @@ export function ProductivityApp() {
       },
     });
 
+    if (!didPersist) {
+      return;
+    }
+
+    setConfirmingTaskId(null);
     setTasks(updatedTasks);
   }
 
@@ -478,7 +756,7 @@ export function ProductivityApp() {
       currentHabit.id === habit.id ? { ...currentHabit, last_completed_at: now } : currentHabit,
     );
 
-    await persistCompletion({
+    const didPersist = await persistCompletion({
       completion,
       event,
       profileDelta: habit.xp_value,
@@ -507,7 +785,90 @@ export function ProductivityApp() {
       },
     });
 
+    if (!didPersist) {
+      return;
+    }
+
     setHabits(updatedHabits);
+  }
+
+  async function undoTaskCompletion(task: Task) {
+    if (task.status !== "completed") {
+      return;
+    }
+
+    const completionToUndo = completions
+      .filter((completion) => completion.task_id === task.id)
+      .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0];
+    const eventToUndo = xpEvents.find(
+      (event) => event.source_type === "task" && event.source_id === task.id,
+    );
+    const xpToRemove = completionToUndo?.xp_awarded ?? task.xp_value;
+    const nextCompletions = completionToUndo
+      ? completions.filter((completion) => completion.id !== completionToUndo.id)
+      : completions;
+    const nextXpEvents = eventToUndo ? xpEvents.filter((event) => event.id !== eventToUndo.id) : xpEvents;
+    const nextTotalXp = Math.max(0, profile.total_xp - xpToRemove);
+    const nextStreak = calculateCurrentStreak(nextCompletions);
+    const nextProfile = {
+      ...profile,
+      total_xp: nextTotalXp,
+      level: calculateLevel(nextTotalXp),
+      current_streak: nextStreak,
+    };
+
+    if (supabase && session) {
+      const { error: taskError } = await supabase
+        .from("tasks")
+        .update({ status: "pending" })
+        .eq("id", task.id);
+      if (taskError) {
+        setMessage(taskError.message);
+        return;
+      }
+
+      if (completionToUndo) {
+        const { error: completionError } = await supabase
+          .from("task_completions")
+          .delete()
+          .eq("id", completionToUndo.id);
+        if (completionError) {
+          setMessage(completionError.message);
+          return;
+        }
+      }
+
+      if (eventToUndo) {
+        const { error: eventError } = await supabase.from("xp_events").delete().eq("id", eventToUndo.id);
+        if (eventError) {
+          setMessage(eventError.message);
+          return;
+        }
+      }
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({
+          total_xp: nextProfile.total_xp,
+          level: nextProfile.level,
+          current_streak: nextProfile.current_streak,
+        })
+        .eq("id", session.user.id);
+      if (profileError) {
+        setMessage(profileError.message);
+        return;
+      }
+    }
+
+    setTasks((current) =>
+      current.map((currentTask) =>
+        currentTask.id === task.id ? { ...currentTask, status: "pending" as const } : currentTask,
+      ),
+    );
+    setCompletions(nextCompletions);
+    setXpEvents(nextXpEvents);
+    setProfile(nextProfile);
+    setMessage(`Completion undone. ${xpToRemove} XP returned to the road.`);
   }
 
   function buildCompletion({
@@ -565,12 +926,12 @@ export function ProductivityApp() {
     nextCompletions: TaskCompletion[];
     celebrationTitle: string;
     persist: () => Promise<string | null>;
-  }) {
+  }): Promise<boolean> {
     const error = await persist();
 
     if (error) {
       setMessage(error);
-      return;
+      return false;
     }
 
     const previousLevel = profile.level;
@@ -598,7 +959,7 @@ export function ProductivityApp() {
 
       if (profileError) {
         setMessage(profileError.message);
-        return;
+        return false;
       }
     }
 
@@ -613,10 +974,13 @@ export function ProductivityApp() {
     } else {
       triggerCelebration(celebrationTitle, `+${completion.xp_awarded} XP`, "gold");
     }
+
+    return true;
   }
 
   return (
     <main className="relative min-h-[100dvh] parchment-bg text-[var(--foreground)]">
+      <div className="map-metal-backdrop" />
       <div className="gold-dust" />
       <div className="vignette" />
       <div className="grain" />
@@ -670,7 +1034,10 @@ export function ProductivityApp() {
                 tasks={[...overdueTasks, ...todayTasks]}
                 categories={categoryById}
                 emptyText="No urgent missions. Forge one below or march ahead."
+                confirmingTaskId={confirmingTaskId}
+                onConfirmationChange={setConfirmingTaskId}
                 onComplete={completeTask}
+                onUndoComplete={undoTaskCompletion}
               />
               {upcomingTasks.length > 0 ? (
                 <div className="mt-6 border-t border-[var(--line)] pt-5">
@@ -681,7 +1048,10 @@ export function ProductivityApp() {
                     tasks={upcomingTasks}
                     categories={categoryById}
                     emptyText="No upcoming missions scheduled yet."
+                    confirmingTaskId={confirmingTaskId}
+                    onConfirmationChange={setConfirmingTaskId}
                     onComplete={completeTask}
+                    onUndoComplete={undoTaskCompletion}
                   />
                 </div>
               ) : null}
@@ -738,7 +1108,10 @@ export function ProductivityApp() {
                 tasks={[...pendingTasks, ...completedTasks].slice(0, 12)}
                 categories={categoryById}
                 emptyText="No missions yet. Begin with one small, certain win."
+                confirmingTaskId={confirmingTaskId}
+                onConfirmationChange={setConfirmingTaskId}
                 onComplete={completeTask}
+                onUndoComplete={undoTaskCompletion}
               />
             </Panel>
           </div>
@@ -890,7 +1263,7 @@ export function ProductivityApp() {
                 <div className="relative flex size-20 items-center justify-center rounded-xl border border-[var(--gold)]/60 bg-[rgba(224,178,76,0.1)]">
                   <span
                     className="absolute inset-0 rounded-xl opacity-40"
-                    style={{ backgroundImage: "url('/art/crest.png')", backgroundSize: "cover", backgroundPosition: "center" }}
+                    style={{ backgroundImage: "url('/art/crest.webp')", backgroundSize: "cover", backgroundPosition: "center" }}
                   />
                   <span className="relative font-display text-3xl font-black text-[var(--gold-bright)]">
                     {profile.avatar_initials}
@@ -942,6 +1315,34 @@ export function ProductivityApp() {
           </div>
         </section>
 
+        {/* Codex */}
+        <section id="codex" className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+          <SectionTitle
+            icon={ScrollText}
+            kicker="The Codex"
+            title="Glossary of the Realm"
+            subtitle="Plain-language definitions for the themed terms used across the program."
+          />
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {glossaryTerms.map((entry) => (
+              <article
+                key={entry.term}
+                className="frame-corners hover-lift rounded-lg border border-[var(--line)] bg-[rgba(28,24,16,0.55)] p-5"
+              >
+                <span className="corner tr" />
+                <span className="corner bl" />
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <h3 className="font-display text-xl font-bold tracking-wide text-[#f4ecd6]">{entry.term}</h3>
+                  <span className="rounded-full border border-[var(--gold)]/35 bg-[rgba(224,178,76,0.08)] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--gold)]">
+                    {entry.kind}
+                  </span>
+                </div>
+                <p className="text-sm leading-6 text-[var(--muted)]">{entry.definition}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
         <footer className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
           <div className="gold-rule mb-6" />
           <p className="text-center font-display text-sm tracking-[0.2em] text-[var(--muted-2)]">
@@ -968,7 +1369,7 @@ function SiteHeader({
         <a href="#dashboard" className="group flex items-center gap-3">
           <span
             className="size-11 shrink-0 rounded-md border border-[var(--gold)]/40"
-            style={{ backgroundImage: "url('/art/crest.png')", backgroundSize: "cover", backgroundPosition: "center" }}
+            style={{ backgroundImage: "url('/art/crest.webp')", backgroundSize: "cover", backgroundPosition: "center" }}
           />
           <span className="leading-tight">
             <span className="block font-mono text-[10px] uppercase tracking-[0.28em] text-[var(--gold)]">Parker System</span>
@@ -981,6 +1382,7 @@ function SiteHeader({
           <a href="#quests" className="hover:text-[var(--gold-bright)]">Quests</a>
           <a href="#analytics" className="hover:text-[var(--gold-bright)]">Chronicle</a>
           <a href="#profile" className="hover:text-[var(--gold-bright)]">Legend</a>
+          <a href="#codex" className="hover:text-[var(--gold-bright)]">Codex</a>
         </nav>
         <div className="flex items-center gap-3">
           <span className="hidden items-center gap-1.5 rounded-full border border-[var(--line)] px-3 py-1 font-mono text-[11px] text-[var(--muted)] sm:inline-flex">
@@ -1025,7 +1427,7 @@ function Hero(props: HeroProps) {
     <section className="relative overflow-hidden">
       <div
         className="absolute inset-0 z-0"
-        style={{ backgroundImage: "url('/art/hero-vista.png')", backgroundSize: "cover", backgroundPosition: "center 35%" }}
+        style={{ backgroundImage: "url('/art/hero-vista.webp')", backgroundSize: "cover", backgroundPosition: "center 35%" }}
       />
       <div className="absolute inset-0 z-0 bg-gradient-to-b from-[rgba(10,9,7,0.55)] via-[rgba(10,9,7,0.78)] to-[var(--background)]" />
       <div className="absolute inset-0 z-0 bg-gradient-to-r from-[rgba(10,9,7,0.85)] via-transparent to-[rgba(10,9,7,0.55)]" />
@@ -1069,7 +1471,7 @@ function Hero(props: HeroProps) {
             </div>
             <div
               className="relative flex size-20 items-center justify-center rounded-xl border border-[var(--gold)]/60"
-              style={{ backgroundImage: "url('/art/crest.png')", backgroundSize: "cover", backgroundPosition: "center" }}
+              style={{ backgroundImage: "url('/art/crest.webp')", backgroundSize: "cover", backgroundPosition: "center" }}
             >
               <span className="absolute inset-0 rounded-xl bg-black/30" />
               <span className="relative font-display text-3xl font-black text-[var(--gold-bright)] drop-shadow">
@@ -1330,12 +1732,18 @@ function TaskList({
   tasks,
   categories,
   emptyText,
+  confirmingTaskId,
+  onConfirmationChange,
   onComplete,
+  onUndoComplete,
 }: {
   tasks: Task[];
   categories: Map<string, TaskCategory>;
   emptyText: string;
+  confirmingTaskId: string | null;
+  onConfirmationChange: (taskId: string | null) => void;
   onComplete: (task: Task) => void;
+  onUndoComplete: (task: Task) => void;
 }) {
   if (tasks.length === 0) {
     return <EmptyState text={emptyText} />;
@@ -1347,6 +1755,7 @@ function TaskList({
         const category = task.category_id ? categories.get(task.category_id) : null;
         const Icon = categoryIcon(task.category_id);
         const done = task.status === "completed";
+        const isConfirming = confirmingTaskId === task.id;
         return (
           <article
             key={task.id}
@@ -1375,21 +1784,41 @@ function TaskList({
                   {task.notes ? <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{task.notes}</p> : null}
                 </div>
               </div>
-              <button
-                disabled={done}
-                onClick={() => onComplete(task)}
-                className="btn-gold inline-flex shrink-0 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold"
-              >
+              <div className="flex shrink-0 flex-col gap-2 sm:min-w-36">
                 {done ? (
-                  <>
-                    <Check className="size-4" /> Felled
-                  </>
+                  <button
+                    onClick={() => onUndoComplete(task)}
+                    className="btn-ghost inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold"
+                  >
+                    <RotateCcw className="size-4" /> Undo
+                  </button>
                 ) : (
                   <>
-                    <Swords className="size-4" /> Fell It
+                    <button
+                      onClick={() => (isConfirming ? onComplete(task) : onConfirmationChange(task.id))}
+                      className="btn-gold inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold"
+                    >
+                      {isConfirming ? (
+                        <>
+                          <Check className="size-4" /> Confirm
+                        </>
+                      ) : (
+                        <>
+                          <Swords className="size-4" /> Fell It
+                        </>
+                      )}
+                    </button>
+                    {isConfirming ? (
+                      <button
+                        onClick={() => onConfirmationChange(null)}
+                        className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--muted)] hover:text-[var(--gold-bright)]"
+                      >
+                        Cancel
+                      </button>
+                    ) : null}
                   </>
                 )}
-              </button>
+              </div>
             </div>
           </article>
         );
@@ -1409,16 +1838,57 @@ function TaskForm({
   onChange: (input: NewTaskInput) => void;
   onSubmit: () => void;
 }) {
+  const recommendation = suggestGoalDetails(input, categories);
+
+  function updateWithAutomation(nextInput: NewTaskInput) {
+    onChange(applyGoalAutomation(nextInput, categories));
+  }
+
+  function fillSuggestion(suggestion: GoalSuggestion) {
+    onChange({
+      ...input,
+      title: suggestion.title,
+      notes: suggestion.notes,
+      category_id: selectAvailableCategory(suggestion.categoryId, categories, input.category_id),
+      priority: suggestion.priority,
+      xp_value: suggestion.xpValue,
+    });
+  }
+
   return (
     <div className="grid gap-4">
       <Field label="Mission title">
         <input
           value={input.title}
           placeholder="Ship the portfolio update…"
-          onChange={(event) => onChange({ ...input, title: event.target.value })}
+          onChange={(event) => updateWithAutomation({ ...input, title: event.target.value })}
           className="field-input"
         />
       </Field>
+      <div className="rounded-md border border-[var(--line)] bg-[rgba(8,7,5,0.35)] p-3">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--gold)]">Quick goal fills</p>
+          <p className="text-xs text-[var(--muted)]">
+            Suggested: {categories.find((category) => category.id === recommendation.categoryId)?.name ?? "Domain"} ·{" "}
+            {priorityLabel[recommendation.priority]} · {recommendation.xpValue} XP
+          </p>
+        </div>
+        <div className="grid gap-2">
+          {goalSuggestions.map((suggestion) => (
+            <button
+              key={suggestion.title}
+              onClick={() => fillSuggestion(suggestion)}
+              className="btn-ghost rounded-md px-3 py-2 text-left text-sm leading-5"
+            >
+              <span className="block font-display tracking-wide text-[var(--foreground)]">{suggestion.title}</span>
+              <span className="mt-0.5 block font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">
+                {categories.find((category) => category.id === suggestion.categoryId)?.name ?? "Suggested"} ·{" "}
+                {priorityLabel[suggestion.priority]} · {suggestion.xpValue} XP
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Domain">
           <select
@@ -1478,7 +1948,7 @@ function TaskForm({
         <textarea
           value={input.notes}
           placeholder="The smallest visible step to victory…"
-          onChange={(event) => onChange({ ...input, notes: event.target.value })}
+          onChange={(event) => updateWithAutomation({ ...input, notes: event.target.value })}
           rows={3}
           className="field-input"
         />
