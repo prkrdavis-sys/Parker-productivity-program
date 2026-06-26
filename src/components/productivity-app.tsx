@@ -1,11 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import type { Session } from "@supabase/supabase-js";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Award,
   BrainCircuit,
   Check,
+  ChevronDown,
   ChevronRight,
   CalendarClock,
   Compass,
@@ -14,6 +16,7 @@ import {
   Flame,
   Hammer,
   Heart,
+  LogOut,
   Lock,
   type LucideIcon,
   Plus,
@@ -27,6 +30,10 @@ import {
   Tent,
   TrendingUp,
   Trophy,
+  UserRound,
+  X,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import {
   defaultAchievements,
@@ -93,6 +100,13 @@ const priorityLabel: Record<Priority, string> = {
   medium: "Mission",
   high: "Vanguard",
   critical: "Boss Fight",
+};
+
+const priorityColor: Record<Priority, string> = {
+  low: "#9c917a",
+  medium: "#9bb066",
+  high: "#e0b24c",
+  critical: "#cf5b48",
 };
 
 const cadenceLabels: Record<HabitCadence, string> = {
@@ -567,6 +581,50 @@ type LocalWorkspace = {
   userAchievements: UserAchievement[];
 };
 
+type GalleryArtwork = {
+  id: string;
+  title: string;
+  kicker: string;
+  description: string;
+  src: string;
+  position: string;
+};
+
+type AppView = "dashboard" | "trophies";
+
+const trophiesPath = "/trophies";
+
+function viewFromPath(pathname: string): AppView {
+  return pathname === trophiesPath ? "trophies" : "dashboard";
+}
+
+const galleryArtworks: GalleryArtwork[] = [
+  {
+    id: "hero-vista",
+    title: "The Long Road Vista",
+    kicker: "Opening Vista",
+    description: "The campaign horizon that sits behind the hero and frames the day as a journey.",
+    src: "/art/hero-vista.webp",
+    position: "center 35%",
+  },
+  {
+    id: "map-backdrop",
+    title: "Realm Cartography",
+    kicker: "Page Backdrop",
+    description: "The full-page map texture underneath the command panels and daily campaign.",
+    src: "/art/map-backdrop.webp",
+    position: "center",
+  },
+  {
+    id: "crest",
+    title: "Wanderer's Crest",
+    kicker: "Profile Sigil",
+    description: "The small heraldic mark used for the profile, header, and character sheet.",
+    src: "/art/crest.webp",
+    position: "center",
+  },
+];
+
 const localWorkspaceStorageKey = "parker-productivity-program.local-workspaces.v1";
 
 const initialLocalWorkspace: LocalWorkspace = {
@@ -588,6 +646,35 @@ function getProfileInitials(displayName: string) {
     .toUpperCase();
 
   return initials || "P";
+}
+
+function getProfileFirstLetter(displayName: string) {
+  return displayName.trim()[0]?.toUpperCase() ?? "P";
+}
+
+type ProfileMenuPosition = {
+  top: number;
+  right: number;
+  maxHeight: number;
+};
+
+function lockBodyScroll() {
+  const scrollY = window.scrollY;
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${scrollY}px`;
+  document.body.style.left = "0";
+  document.body.style.right = "0";
+  document.body.style.width = "100%";
+  return scrollY;
+}
+
+function unlockBodyScroll(scrollY: number) {
+  document.body.style.position = "";
+  document.body.style.top = "";
+  document.body.style.left = "";
+  document.body.style.right = "";
+  document.body.style.width = "";
+  window.scrollTo(0, scrollY);
 }
 
 function createLocalWorkspace(displayName: string): LocalWorkspace {
@@ -613,10 +700,6 @@ function createLocalWorkspace(displayName: string): LocalWorkspace {
 }
 
 function readLocalWorkspaceState(): { activeProfileId: string; workspaces: LocalWorkspace[] } {
-  if (typeof window === "undefined") {
-    return { activeProfileId: demoProfile.id, workspaces: [initialLocalWorkspace] };
-  }
-
   try {
     const stored = window.localStorage.getItem(localWorkspaceStorageKey);
     if (!stored) {
@@ -641,25 +724,33 @@ function readLocalWorkspaceState(): { activeProfileId: string; workspaces: Local
   }
 }
 
+function getActiveLocalWorkspace(state: { activeProfileId: string; workspaces: LocalWorkspace[] }) {
+  return (
+    state.workspaces.find((workspace) => workspace.profile.id === state.activeProfileId) ??
+    state.workspaces[0] ??
+    initialLocalWorkspace
+  );
+}
+
+const defaultLocalWorkspaceState = {
+  activeProfileId: demoProfile.id,
+  workspaces: [initialLocalWorkspace],
+};
+
 export function ProductivityApp() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  const [localWorkspaceState, setLocalWorkspaceState] = useState(() => readLocalWorkspaceState());
-  const activeLocalWorkspace =
-    localWorkspaceState.workspaces.find((workspace) => workspace.profile.id === localWorkspaceState.activeProfileId) ??
-    localWorkspaceState.workspaces[0] ??
-    initialLocalWorkspace;
+  const [localWorkspaceState, setLocalWorkspaceState] = useState(defaultLocalWorkspaceState);
+  const [hasHydratedLocalWorkspaces, setHasHydratedLocalWorkspaces] = useState(false);
+  const activeLocalWorkspace = getActiveLocalWorkspace(localWorkspaceState);
   const [session, setSession] = useState<Session | null>(null);
-  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [profile, setProfile] = useState<Profile>(activeLocalWorkspace.profile);
+  const [profile, setProfile] = useState<Profile>(initialLocalWorkspace.profile);
   const [categories, setCategories] = useState<TaskCategory[]>(defaultCategories);
-  const [tasks, setTasks] = useState<Task[]>(activeLocalWorkspace.tasks);
-  const [habits, setHabits] = useState<Habit[]>(activeLocalWorkspace.habits);
-  const [completions, setCompletions] = useState<TaskCompletion[]>(activeLocalWorkspace.completions);
-  const [xpEvents, setXpEvents] = useState<XpEvent[]>(activeLocalWorkspace.xpEvents);
+  const [tasks, setTasks] = useState<Task[]>(initialLocalWorkspace.tasks);
+  const [habits, setHabits] = useState<Habit[]>(initialLocalWorkspace.habits);
+  const [completions, setCompletions] = useState<TaskCompletion[]>(initialLocalWorkspace.completions);
+  const [xpEvents, setXpEvents] = useState<XpEvent[]>(initialLocalWorkspace.xpEvents);
   const [achievements, setAchievements] = useState<Achievement[]>(defaultAchievements);
-  const [userAchievements, setUserAchievements] = useState<UserAchievement[]>(activeLocalWorkspace.userAchievements);
+  const [userAchievements, setUserAchievements] = useState<UserAchievement[]>(initialLocalWorkspace.userAchievements);
   const [taskInput, setTaskInput] = useState<NewTaskInput>(initialTaskInput);
   const [habitInput, setHabitInput] = useState<NewHabitInput>(initialHabitInput);
   const [isLoading, setIsLoading] = useState(false);
@@ -667,6 +758,9 @@ export function ProductivityApp() {
   const [celebration, setCelebration] = useState<Celebration | null>(null);
   const [confirmingTaskId, setConfirmingTaskId] = useState<string | null>(null);
   const [newProfileName, setNewProfileName] = useState("");
+  const [isGalleryVisible, setIsGalleryVisible] = useState(false);
+  const [selectedArtwork, setSelectedArtwork] = useState<GalleryArtwork | null>(null);
+  const [view, setView] = useState<AppView>("dashboard");
 
   const isLocalMode = !supabase || !session;
   const activeUserId = session?.user.id ?? profile.id;
@@ -702,6 +796,55 @@ export function ProductivityApp() {
     setCelebration({ id: Date.now(), title, subtitle, tone });
   }, []);
 
+  const revealGallery = useCallback(() => {
+    setIsGalleryVisible(true);
+    window.requestAnimationFrame(() => {
+      document.getElementById("gallery")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, []);
+
+  const openTrophies = useCallback(() => {
+    setView("trophies");
+    if (window.location.pathname !== trophiesPath) {
+      window.history.pushState({ view: "trophies" }, "", trophiesPath);
+    }
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, []);
+
+  const closeTrophies = useCallback(() => {
+    setView("dashboard");
+    if (window.location.pathname === trophiesPath) {
+      window.history.pushState({ view: "dashboard" }, "", "/");
+    }
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, []);
+
+  useEffect(() => {
+    /* eslint-disable-next-line react-hooks/set-state-in-effect -- Sync view from the URL once after mount. */
+    setView(viewFromPath(window.location.pathname));
+    const handlePopState = () => {
+      setView(viewFromPath(window.location.pathname));
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    const stored = readLocalWorkspaceState();
+    const workspace = getActiveLocalWorkspace(stored);
+
+    /* eslint-disable react-hooks/set-state-in-effect -- Local profile data is restored from browser storage after mount. */
+    setLocalWorkspaceState(stored);
+    setProfile(workspace.profile);
+    setTasks(workspace.tasks);
+    setHabits(workspace.habits);
+    setCompletions(workspace.completions);
+    setXpEvents(workspace.xpEvents);
+    setUserAchievements(workspace.userAchievements);
+    setHasHydratedLocalWorkspaces(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, []);
+
   useEffect(() => {
     if (!celebration) {
       return;
@@ -711,7 +854,7 @@ export function ProductivityApp() {
   }, [celebration]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (!hasHydratedLocalWorkspaces) {
       return;
     }
 
@@ -736,7 +879,7 @@ export function ProductivityApp() {
     };
 
     window.localStorage.setItem(localWorkspaceStorageKey, JSON.stringify(nextLocalWorkspaceState));
-  }, [completions, habits, isLocalMode, localWorkspaceState, profile, tasks, userAchievements, xpEvents]);
+  }, [completions, habits, hasHydratedLocalWorkspaces, isLocalMode, localWorkspaceState, profile, tasks, userAchievements, xpEvents]);
 
   useEffect(() => {
     if (!supabase) {
@@ -881,31 +1024,6 @@ export function ProductivityApp() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadWorkspace();
   }, [loadWorkspace, session, supabase]);
-
-  async function handleAuth() {
-    if (!supabase) {
-      setMessage("Bind Supabase env vars to enter live sync. Local profiles are active right now.");
-      return;
-    }
-
-    if (!email || password.length < 6) {
-      setMessage("Enter an email and a password with at least 6 characters.");
-      return;
-    }
-
-    setIsLoading(true);
-    const result =
-      authMode === "signup"
-        ? await supabase.auth.signUp({ email, password })
-        : await supabase.auth.signInWithPassword({ email, password });
-
-    if (result.error) {
-      setMessage(result.error.message);
-    } else {
-      setMessage(authMode === "signup" ? "Account forged. Confirm by email if required." : "Welcome back, wanderer.");
-    }
-    setIsLoading(false);
-  }
 
   async function handleSignOut() {
     if (!supabase) {
@@ -1344,20 +1462,31 @@ export function ProductivityApp() {
       <div className="grain" />
 
       {celebration ? <CelebrationOverlay key={celebration.id} celebration={celebration} /> : null}
+      {selectedArtwork ? <ArtworkLightbox artwork={selectedArtwork} onClose={() => setSelectedArtwork(null)} /> : null}
 
       <div className="relative z-10">
         <SiteHeader
+          profile={profile}
           isLocalMode={isLocalMode}
           isSignedIn={Boolean(session)}
           localWorkspaces={localWorkspaces}
           activeLocalProfileId={activeLocalProfileId}
           newProfileName={newProfileName}
+          accountEmail={session?.user.email ?? null}
           onNewProfileNameChange={setNewProfileName}
           onAddLocalProfile={addLocalProfile}
           onSwitchLocalProfile={switchLocalProfile}
           onSignOut={handleSignOut}
         />
 
+        {view === "trophies" ? (
+          <TrophiesPage
+            achievements={achievements}
+            unlockedAchievements={unlockedAchievements}
+            onBack={closeTrophies}
+          />
+        ) : (
+        <>
         <Hero
           profile={profile}
           rank={rank.name}
@@ -1366,16 +1495,7 @@ export function ProductivityApp() {
           dailyDone={dailyDone}
           dailyTarget={dailyTarget}
           dailyProgress={dailyProgress}
-          authMode={authMode}
-          email={email}
-          password={password}
-          isLoading={isLoading}
-          hasSupabase={Boolean(supabase)}
-          isSignedIn={Boolean(session)}
-          onAuthModeChange={setAuthMode}
-          onEmailChange={setEmail}
-          onPasswordChange={setPassword}
-          onSubmit={handleAuth}
+          onOpenGallery={revealGallery}
         />
 
         {/* Command bar */}
@@ -1396,12 +1516,16 @@ export function ProductivityApp() {
 
         {/* Missions */}
         <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="grid gap-6">
+            <Panel icon={Plus} title="Forge a Mission" description="Set a goal, name the stakes, claim the bounty.">
+              <TaskForm input={taskInput} categories={categories} onChange={setTaskInput} onSubmit={addTask} />
+            </Panel>
+
             <Panel icon={ScrollText} title="Today's Missions" description="The clearest list of what deserves your steel right now.">
               <TaskList
                 tasks={[...overdueTasks, ...todayTasks]}
                 categories={categoryById}
-                emptyText="No urgent missions. Forge one below or march ahead."
+                emptyText="No urgent missions. Forge one above or march ahead."
                 confirmingTaskId={confirmingTaskId}
                 onConfirmationChange={setConfirmingTaskId}
                 onComplete={completeTask}
@@ -1423,10 +1547,6 @@ export function ProductivityApp() {
                   />
                 </div>
               ) : null}
-            </Panel>
-
-            <Panel icon={Plus} title="Forge a Mission" description="Set a goal, name the stakes, claim the bounty.">
-              <TaskForm input={taskInput} categories={categories} onChange={setTaskInput} onSubmit={addTask} />
             </Panel>
           </div>
         </section>
@@ -1669,15 +1789,26 @@ export function ProductivityApp() {
                       </div>
                       <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{achievement.description}</p>
                       <p className="mt-3 font-mono text-xs text-[var(--muted-2)]">
-                        {unlocked ? "Claimed" : `Target ${achievement.unlock_threshold}`} · +{achievement.xp_bonus} XP
+                        {unlocked ? `Claimed · +${achievement.xp_bonus} XP` : `+${achievement.xp_bonus} XP`}
                       </p>
                     </article>
                   );
                 })}
               </div>
+              <button
+                type="button"
+                onClick={openTrophies}
+                className="hover-lift mt-4 inline-flex items-center gap-2 rounded-md border border-[var(--gold)]/40 bg-[rgba(224,178,76,0.07)] px-4 py-2 font-display text-sm tracking-wide text-[var(--gold-bright)] transition-colors hover:bg-[rgba(224,178,76,0.14)]"
+              >
+                <Trophy className="size-4" />
+                View all trophies
+                <ChevronRight className="size-4" />
+              </button>
             </Panel>
           </div>
         </section>
+
+        {isGalleryVisible ? <GallerySection artworks={galleryArtworks} onOpenArtwork={setSelectedArtwork} /> : null}
 
         {/* Codex */}
         <section id="codex" className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -1711,27 +1842,98 @@ export function ProductivityApp() {
             THE LONG ROAD · PARKER&apos;S PRODUCTIVITY PROGRAM
           </p>
         </footer>
+        </>
+        )}
       </div>
     </main>
   );
 }
 
+function TrophiesPage({
+  achievements,
+  unlockedAchievements,
+  onBack,
+}: {
+  achievements: Achievement[];
+  unlockedAchievements: Achievement[];
+  onBack: () => void;
+}) {
+  const unlockedIds = new Set(unlockedAchievements.map((item) => item.id));
+  const sorted = [...achievements].sort((a, b) => {
+    const aUnlocked = unlockedIds.has(a.id) ? 0 : 1;
+    const bUnlocked = unlockedIds.has(b.id) ? 0 : 1;
+    if (aUnlocked !== bUnlocked) return aUnlocked - bUnlocked;
+    return a.unlock_threshold - b.unlock_threshold;
+  });
+
+  return (
+    <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <button
+        type="button"
+        onClick={onBack}
+        className="hover-lift mb-6 inline-flex items-center gap-2 rounded-md border border-[var(--line)] bg-[rgba(28,24,16,0.5)] px-4 py-2 font-display text-sm tracking-wide text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
+      >
+        <ChevronRight className="size-4 rotate-180" />
+        Back to dashboard
+      </button>
+
+      <SectionTitle
+        icon={Trophy}
+        kicker="The Trophy Hall"
+        title="All Trophies"
+        subtitle={`Every honor in the realm — ${unlockedAchievements.length} of ${achievements.length} claimed.`}
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {sorted.map((achievement) => {
+          const unlocked = unlockedIds.has(achievement.id);
+          return (
+            <article
+              key={achievement.id}
+              className={`hover-lift rounded-md border p-4 ${unlocked ? "border-[var(--gold)]/40 bg-[rgba(224,178,76,0.07)]" : "border-[var(--line)] bg-[rgba(28,24,16,0.5)]"}`}
+            >
+              <div className="flex items-center gap-2">
+                {unlocked ? (
+                  <Trophy className="size-4 text-[var(--gold)]" />
+                ) : (
+                  <Lock className="size-4 text-[var(--muted-2)]" />
+                )}
+                <p className={`font-display tracking-wide ${unlocked ? "text-[var(--gold-bright)]" : "text-[var(--foreground)]"}`}>
+                  {achievement.name}
+                </p>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{achievement.description}</p>
+              <p className="mt-3 font-mono text-xs text-[var(--muted-2)]">
+                {unlocked ? `Claimed · +${achievement.xp_bonus} XP` : `+${achievement.xp_bonus} XP`}
+              </p>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function SiteHeader({
+  profile,
   isLocalMode,
   isSignedIn,
   localWorkspaces,
   activeLocalProfileId,
   newProfileName,
+  accountEmail,
   onNewProfileNameChange,
   onAddLocalProfile,
   onSwitchLocalProfile,
   onSignOut,
 }: {
+  profile: Profile;
   isLocalMode: boolean;
   isSignedIn: boolean;
   localWorkspaces: LocalWorkspace[];
   activeLocalProfileId: string;
   newProfileName: string;
+  accountEmail: string | null;
   onNewProfileNameChange: (value: string) => void;
   onAddLocalProfile: () => void;
   onSwitchLocalProfile: (profileId: string) => void;
@@ -1758,83 +1960,221 @@ function SiteHeader({
           <a href="#profile" className="hover:text-[var(--gold-bright)]">Legend</a>
           <a href="#codex" className="hover:text-[var(--gold-bright)]">Codex</a>
         </nav>
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          {isLocalMode ? (
-            <ProfileSwitcher
-              workspaces={localWorkspaces}
-              activeProfileId={activeLocalProfileId}
-              newProfileName={newProfileName}
-              onNewProfileNameChange={onNewProfileNameChange}
-              onAddProfile={onAddLocalProfile}
-              onSwitchProfile={onSwitchLocalProfile}
-            />
-          ) : (
-            <span className="hidden items-center gap-1.5 rounded-full border border-[var(--line)] px-3 py-1 font-mono text-[11px] text-[var(--muted)] sm:inline-flex">
-              <span className="size-1.5 rounded-full bg-[var(--success)]" />
-              Live Sync
-            </span>
-          )}
-          {isSignedIn ? (
-            <button onClick={onSignOut} className="btn-ghost rounded-md px-3 py-2 text-xs font-semibold sm:px-4 sm:text-sm">
-              Sign Out
-            </button>
-          ) : null}
-        </div>
+        <ProfileMenu
+          profile={profile}
+          isLocalMode={isLocalMode}
+          isSignedIn={isSignedIn}
+          localWorkspaces={localWorkspaces}
+          activeLocalProfileId={activeLocalProfileId}
+          newProfileName={newProfileName}
+          accountEmail={accountEmail}
+          onNewProfileNameChange={onNewProfileNameChange}
+          onAddLocalProfile={onAddLocalProfile}
+          onSwitchLocalProfile={onSwitchLocalProfile}
+          onSignOut={onSignOut}
+        />
       </div>
     </header>
   );
 }
 
-function ProfileSwitcher({
-  workspaces,
-  activeProfileId,
+function ProfileMenu({
+  profile,
+  isLocalMode,
+  isSignedIn,
+  localWorkspaces,
+  activeLocalProfileId,
   newProfileName,
+  accountEmail,
   onNewProfileNameChange,
-  onAddProfile,
-  onSwitchProfile,
+  onAddLocalProfile,
+  onSwitchLocalProfile,
+  onSignOut,
 }: {
-  workspaces: LocalWorkspace[];
-  activeProfileId: string;
+  profile: Profile;
+  isLocalMode: boolean;
+  isSignedIn: boolean;
+  localWorkspaces: LocalWorkspace[];
+  activeLocalProfileId: string;
   newProfileName: string;
+  accountEmail: string | null;
   onNewProfileNameChange: (value: string) => void;
-  onAddProfile: () => void;
-  onSwitchProfile: (profileId: string) => void;
+  onAddLocalProfile: () => void;
+  onSwitchLocalProfile: (profileId: string) => void;
+  onSignOut: () => void;
 }) {
+  const profileLetter = getProfileFirstLetter(profile.display_name);
+  const [isOpen, setIsOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<ProfileMenuPosition | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
+
+  const updateMenuPosition = useCallback(() => {
+    const button = buttonRef.current;
+    if (!button) {
+      return;
+    }
+
+    const rect = button.getBoundingClientRect();
+    const gap = 12;
+    const viewportPadding = 16;
+    const maxHeight = Math.max(
+      120,
+      Math.min(512, window.innerHeight - rect.bottom - gap - viewportPadding),
+    );
+
+    setMenuPosition({
+      top: rect.bottom + gap,
+      right: window.innerWidth - rect.right,
+      maxHeight,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [isOpen, updateMenuPosition]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const lockedScrollY = lockBodyScroll();
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node;
+      if (!buttonRef.current?.contains(target) && !menuPanelRef.current?.contains(target)) {
+        setIsOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      unlockBodyScroll(lockedScrollY);
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
   return (
-    <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
-      <label className="flex min-w-36 items-center gap-2 rounded-md border border-[var(--line)] bg-[rgba(8,7,5,0.45)] px-2.5 py-2">
-        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">Profile</span>
-        <select
-          value={activeProfileId}
-          onChange={(event) => onSwitchProfile(event.target.value)}
-          className="min-w-0 flex-1 bg-transparent font-display text-sm tracking-wide text-[var(--foreground)] outline-none"
-        >
-          {workspaces.map((workspace) => (
-            <option key={workspace.profile.id} value={workspace.profile.id}>
-              {workspace.profile.display_name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="flex min-w-0 items-center gap-2">
-        <input
-          value={newProfileName}
-          onChange={(event) => onNewProfileNameChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              onAddProfile();
-            }
-          }}
-          placeholder="New profile"
-          className="field-input h-9 w-32 px-3 py-2 text-xs sm:w-40"
+    <div className="relative shrink-0">
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        onClick={() => setIsOpen((open) => !open)}
+        className="btn-ghost flex items-center gap-2 rounded-full px-2.5 py-2 text-sm font-semibold sm:px-3"
+      >
+        <span className="flex size-8 items-center justify-center rounded-full border border-[var(--gold)]/55 bg-[rgba(224,178,76,0.12)] text-[var(--gold-bright)]">
+          <UserRound className="size-4" />
+        </span>
+        <span className="flex size-8 items-center justify-center rounded-full bg-[var(--gold)] font-display text-base font-black text-[#1a1305]">
+          {profileLetter}
+        </span>
+        <ChevronDown
+          className={`size-4 text-[var(--muted)] transition-transform ${isOpen ? "rotate-180" : ""}`}
         />
-        <button
-          onClick={onAddProfile}
-          className="btn-gold inline-flex h-9 items-center justify-center gap-1.5 rounded-md px-3 text-xs font-bold"
-        >
-          <Plus className="size-3.5" /> Add
-        </button>
+        <span className="sr-only">{isOpen ? "Close profile menu" : "Open profile menu"}</span>
+      </button>
+
+      {isOpen && menuPosition ? (
+      <div
+        ref={menuPanelRef}
+        role="menu"
+        className="fixed z-[80] w-[min(calc(100vw-2rem),24rem)] overflow-y-auto overscroll-contain rounded-lg border border-[var(--line)] bg-[rgba(16,13,9,0.98)] p-4 shadow-2xl shadow-black/60 backdrop-blur-xl [-webkit-overflow-scrolling:touch]"
+        style={{
+          top: menuPosition.top,
+          right: menuPosition.right,
+          maxHeight: menuPosition.maxHeight,
+        }}
+      >
+        <div className="mb-4 flex items-start gap-3 border-b border-[var(--line)] pb-4">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-[var(--gold)]/55 bg-[rgba(224,178,76,0.12)] font-display text-xl font-black text-[var(--gold-bright)]">
+            {profileLetter}
+          </span>
+          <div className="min-w-0">
+            <p className="eyebrow">Profile</p>
+            <p className="mt-1 truncate font-display text-xl tracking-wide">{profile.display_name}</p>
+            <p className="mt-1 break-all font-mono text-xs text-[var(--muted)]">{accountEmail ?? "Local profile"}</p>
+          </div>
+        </div>
+
+        {isLocalMode ? (
+          <div className="grid gap-3 border-b border-[var(--line)] pb-4">
+            <Field label="Switch profile">
+              <select
+                value={activeLocalProfileId}
+                onChange={(event) => onSwitchLocalProfile(event.target.value)}
+                className="field-input text-sm"
+              >
+                {localWorkspaces.map((workspace) => (
+                  <option key={workspace.profile.id} value={workspace.profile.id}>
+                    {workspace.profile.display_name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <input
+                value={newProfileName}
+                onChange={(event) => onNewProfileNameChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    onAddLocalProfile();
+                  }
+                }}
+                placeholder="New profile"
+                className="field-input text-sm"
+              />
+              <button
+                onClick={onAddLocalProfile}
+                className="btn-gold inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md px-3 text-xs font-bold"
+              >
+                <Plus className="size-3.5" /> Add
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-4 flex items-center gap-2 rounded-md border border-[var(--success)]/30 bg-[rgba(155,176,102,0.08)] px-3 py-2.5 font-mono text-xs text-[var(--muted)]">
+            <span className="size-1.5 rounded-full bg-[var(--success)]" />
+            Live Sync active
+          </div>
+        )}
+
+        {isSignedIn ? (
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen(false);
+              onSignOut();
+            }}
+            className="btn-ghost mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold"
+          >
+            <LogOut className="size-4" /> Sign Out
+          </button>
+        ) : null}
       </div>
+      ) : null}
     </div>
   );
 }
@@ -1847,20 +2187,11 @@ type HeroProps = {
   dailyDone: number;
   dailyTarget: number;
   dailyProgress: number;
-  authMode: "signin" | "signup";
-  email: string;
-  password: string;
-  isLoading: boolean;
-  hasSupabase: boolean;
-  isSignedIn: boolean;
-  onAuthModeChange: (mode: "signin" | "signup") => void;
-  onEmailChange: (value: string) => void;
-  onPasswordChange: (value: string) => void;
-  onSubmit: () => void;
+  onOpenGallery: () => void;
 };
 
 function Hero(props: HeroProps) {
-  const { profile, rank, levelProgress, message, dailyProgress, dailyDone, dailyTarget } = props;
+  const { profile, rank, levelProgress, message, dailyProgress, dailyDone, dailyTarget, onOpenGallery } = props;
 
   return (
     <section className="relative overflow-hidden">
@@ -1891,15 +2222,20 @@ function Hero(props: HeroProps) {
             <a href="#quests" className="btn-ghost inline-flex w-full items-center justify-center gap-2 rounded-md px-5 py-3.5 text-sm font-bold sm:w-auto sm:px-7">
               <Flame className="size-4" /> Swear an Oath
             </a>
+            <button
+              type="button"
+              onClick={onOpenGallery}
+              className="btn-ghost inline-flex w-full items-center justify-center gap-2 rounded-md px-5 py-3.5 text-sm font-bold sm:w-auto sm:px-7"
+            >
+              <Sparkles className="size-4" /> View the Art
+            </button>
           </div>
           <p className="mt-6 flex max-w-xl items-start gap-2 text-sm leading-6 text-[var(--muted)]">
             <Sparkles className="size-4 text-[var(--gold)]" /> {message}
           </p>
         </div>
 
-        <aside className="rise frame frame-corners rounded-lg p-4 shadow-2xl shadow-black/50 backdrop-blur-md sm:p-6">
-          <span className="corner tr" />
-          <span className="corner bl" />
+        <aside className="rise frame rounded-lg p-4 shadow-2xl shadow-black/50 backdrop-blur-md sm:p-6">
           <div className="mb-5 flex flex-col gap-4 border-b border-[var(--line)] pb-5 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between sm:mb-6">
             <div className="min-w-0">
               <p className="eyebrow">Operator</p>
@@ -1959,22 +2295,205 @@ function Hero(props: HeroProps) {
               <div className="xp-fill" style={{ width: `${dailyProgress}%` }} />
             </div>
           </div>
-
-          <AuthPanel
-            authMode={props.authMode}
-            email={props.email}
-            password={props.password}
-            isLoading={props.isLoading}
-            hasSupabase={props.hasSupabase}
-            isSignedIn={props.isSignedIn}
-            onAuthModeChange={props.onAuthModeChange}
-            onEmailChange={props.onEmailChange}
-            onPasswordChange={props.onPasswordChange}
-            onSubmit={props.onSubmit}
-          />
         </aside>
       </div>
     </section>
+  );
+}
+
+function GallerySection({
+  artworks,
+  onOpenArtwork,
+}: {
+  artworks: GalleryArtwork[];
+  onOpenArtwork: (artwork: GalleryArtwork) => void;
+}) {
+  return (
+    <section id="gallery" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-12 sm:px-6 lg:px-8">
+      <SectionTitle
+        icon={Sparkles}
+        kicker="Armory Gallery"
+        title="Artwork of the Realm"
+        subtitle="A closer look at the vista, map, and crest that shape the command center."
+      />
+      <div className="grid gap-5 md:grid-cols-3">
+        {artworks.map((artwork) => (
+          <button
+            key={artwork.id}
+            type="button"
+            onClick={() => onOpenArtwork(artwork)}
+            className="group hover-lift overflow-hidden rounded-lg border border-[var(--line)] bg-[rgba(28,24,16,0.6)] text-left shadow-xl shadow-black/30 focus-visible:border-[var(--gold)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(224,178,76,0.35)]"
+          >
+            <span className="relative block aspect-[4/3] overflow-hidden bg-[#080705]">
+              <Image
+                src={artwork.src}
+                alt={artwork.title}
+                width={1200}
+                height={900}
+                sizes="(min-width: 768px) 33vw, 100vw"
+                className="size-full object-cover transition duration-500 group-hover:scale-105"
+                style={{ objectPosition: artwork.position }}
+              />
+              <span className="absolute inset-0 bg-gradient-to-t from-[rgba(8,7,5,0.82)] via-transparent to-transparent" />
+              <span className="absolute bottom-3 left-3 rounded-full border border-[var(--gold)]/40 bg-[rgba(8,7,5,0.72)] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--gold)]">
+                Click to inspect
+              </span>
+            </span>
+            <span className="block p-4">
+              <span className="eyebrow">{artwork.kicker}</span>
+              <span className="mt-2 block font-display text-xl font-bold tracking-wide text-[#f4ecd6]">{artwork.title}</span>
+              <span className="mt-2 block text-sm leading-6 text-[var(--muted)]">{artwork.description}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ArtworkLightbox({ artwork, onClose }: { artwork: GalleryArtwork; onClose: () => void }) {
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const dragRef = useRef<{ pointerId: number; x: number; y: number; offsetX: number; offsetY: number } | null>(null);
+  const zoomRef = useRef(1);
+  const isZoomed = zoom > 1;
+
+  const clampZoom = useCallback((value: number) => Math.min(4, Math.max(1, Number(value.toFixed(2)))), []);
+
+  const updateZoom = useCallback(
+    (nextZoom: number) => {
+      const clampedZoom = clampZoom(nextZoom);
+      setZoom(clampedZoom);
+      if (clampedZoom === 1) {
+        setOffset({ x: 0, y: 0 });
+      }
+    },
+    [clampZoom],
+  );
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+
+  useEffect(() => {
+    const lockedScrollY = lockBodyScroll();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+      if (event.key === "+" || event.key === "=") {
+        updateZoom(zoomRef.current + 0.25);
+      }
+      if (event.key === "-") {
+        updateZoom(zoomRef.current - 0.25);
+      }
+      if (event.key === "0") {
+        updateZoom(1);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      unlockBodyScroll(lockedScrollY);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose, updateZoom]);
+
+  function handleWheel(event: React.WheelEvent<HTMLDivElement>) {
+    event.preventDefault();
+    updateZoom(zoom + (event.deltaY < 0 ? 0.2 : -0.2));
+  }
+
+  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (!isZoomed) {
+      return;
+    }
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      offsetX: offset.x,
+      offsetY: offset.y,
+    };
+  }
+
+  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    setOffset({
+      x: drag.offsetX + event.clientX - drag.x,
+      y: drag.offsetY + event.clientY - drag.y,
+    });
+  }
+
+  function handlePointerEnd(event: React.PointerEvent<HTMLDivElement>) {
+    if (dragRef.current?.pointerId === event.pointerId) {
+      dragRef.current = null;
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[120] bg-[rgba(5,4,3,0.9)] p-3 backdrop-blur-xl sm:p-6" role="dialog" aria-modal="true" aria-label={`${artwork.title} artwork viewer`}>
+      <button type="button" aria-label="Close artwork viewer" onClick={onClose} className="absolute inset-0 z-0 cursor-default" />
+      <div className="relative z-10 mx-auto flex h-full max-w-7xl flex-col overflow-hidden rounded-xl border border-[var(--line-strong)] bg-[rgba(16,13,9,0.98)] shadow-2xl shadow-black/70">
+        <div className="flex flex-col gap-3 border-b border-[var(--line)] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="eyebrow">{artwork.kicker}</p>
+            <h2 className="mt-1 font-display text-2xl font-bold tracking-wide text-[#f4ecd6]">{artwork.title}</h2>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => updateZoom(zoom - 0.25)} className="btn-ghost inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold">
+              <ZoomOut className="size-4" /> Zoom Out
+            </button>
+            <button type="button" onClick={() => updateZoom(zoom + 0.25)} className="btn-gold inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold">
+              <ZoomIn className="size-4" /> Zoom In
+            </button>
+            <button type="button" onClick={() => updateZoom(1)} className="btn-ghost rounded-md px-3 py-2 text-sm font-semibold">
+              Reset
+            </button>
+            <button type="button" aria-label="Close artwork viewer" onClick={onClose} className="btn-ghost inline-flex items-center justify-center rounded-md p-2.5">
+              <X className="size-4" />
+            </button>
+          </div>
+        </div>
+        <div
+          className={`relative min-h-0 flex-1 overflow-hidden bg-[#050403] ${isZoomed ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"}`}
+          onWheel={handleWheel}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerEnd}
+          onPointerCancel={handlePointerEnd}
+          onDoubleClick={() => updateZoom(isZoomed ? 1 : 2)}
+          style={{ touchAction: isZoomed ? "none" : "pan-y" }}
+        >
+          <Image
+            src={artwork.src}
+            alt={artwork.title}
+            width={1920}
+            height={1080}
+            sizes="100vw"
+            draggable={false}
+            className="size-full select-none object-contain transition-transform duration-100"
+            style={{
+              objectPosition: artwork.position,
+              transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+            }}
+          />
+        </div>
+        <div className="flex flex-col gap-2 border-t border-[var(--line)] p-4 text-sm leading-6 text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between">
+          <p>{artwork.description}</p>
+          <p className="shrink-0 font-mono text-xs uppercase tracking-[0.14em] text-[var(--gold)]">
+            {Math.round(zoom * 100)}% · Wheel or double-click to zoom, drag to pan
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -2016,78 +2535,6 @@ function SectionTitle({
   );
 }
 
-function AuthPanel({
-  authMode,
-  email,
-  password,
-  isLoading,
-  hasSupabase,
-  isSignedIn,
-  onAuthModeChange,
-  onEmailChange,
-  onPasswordChange,
-  onSubmit,
-}: {
-  authMode: "signin" | "signup";
-  email: string;
-  password: string;
-  isLoading: boolean;
-  hasSupabase: boolean;
-  isSignedIn: boolean;
-  onAuthModeChange: (mode: "signin" | "signup") => void;
-  onEmailChange: (value: string) => void;
-  onPasswordChange: (value: string) => void;
-  onSubmit: () => void;
-}) {
-  if (isSignedIn) {
-    return (
-      <div className="mt-6 flex items-start gap-2.5 rounded-md border border-[var(--success)]/30 bg-[rgba(155,176,102,0.08)] p-4 text-sm text-[var(--muted)]">
-        <Shield className="mt-0.5 size-4 shrink-0 text-[var(--success)]" />
-        <span>Live account mode is active. Your missions, quests, XP, and legend sync through Supabase.</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-6 rounded-md border border-[var(--line)] bg-[rgba(8,7,5,0.5)] p-4">
-      <div className="mb-4 flex rounded-md border border-[var(--line)] p-1 font-display text-sm tracking-wide">
-        <button
-          onClick={() => onAuthModeChange("signin")}
-          className={`flex-1 rounded px-3 py-2 ${authMode === "signin" ? "btn-gold" : "text-[var(--muted)]"}`}
-        >
-          Enter
-        </button>
-        <button
-          onClick={() => onAuthModeChange("signup")}
-          className={`flex-1 rounded px-3 py-2 ${authMode === "signup" ? "btn-gold" : "text-[var(--muted)]"}`}
-        >
-          Begin
-        </button>
-      </div>
-      <div className="grid gap-3">
-        <Field label="Email">
-          <input value={email} onChange={(event) => onEmailChange(event.target.value)} type="email" className="field-input" />
-        </Field>
-        <Field label="Password">
-          <input
-            value={password}
-            onChange={(event) => onPasswordChange(event.target.value)}
-            type="password"
-            className="field-input"
-          />
-        </Field>
-        <button
-          disabled={isLoading || !hasSupabase}
-          onClick={onSubmit}
-          className="btn-gold mt-1 inline-flex items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-bold"
-        >
-          {hasSupabase ? (isLoading ? "Working" : "Continue the Road") : "Bind Supabase Env Vars"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function Panel({
   icon: Icon,
   title,
@@ -2100,9 +2547,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="frame frame-corners rounded-lg p-5 shadow-xl shadow-black/30 sm:p-6">
-      <span className="corner tr" />
-      <span className="corner bl" />
+    <div className="frame rounded-lg p-5 shadow-xl shadow-black/30 sm:p-6">
       <div className="mb-5 flex items-start gap-3">
         <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md border border-[var(--gold)]/40 bg-[rgba(224,178,76,0.08)] text-[var(--gold)]">
           <Icon className="size-5" />
@@ -2262,6 +2707,118 @@ function TaskList({
   );
 }
 
+type SelectOption = {
+  value: string;
+  label: string;
+  hint?: string;
+  color?: string;
+  icon?: LucideIcon;
+};
+
+function CustomSelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: SelectOption[];
+  placeholder?: string;
+  ariaLabel?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const selected = options.find((option) => option.value === value);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  const SelectedIcon = selected?.icon;
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        data-open={open}
+        data-placeholder={selected ? undefined : "true"}
+        onClick={() => setOpen((prev) => !prev)}
+        className="select-trigger"
+      >
+        <span className="flex min-w-0 items-center gap-2.5">
+          {selected?.color ? (
+            <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: selected.color }} />
+          ) : null}
+          {SelectedIcon ? <SelectedIcon className="size-4 shrink-0 text-[var(--gold)]" /> : null}
+          <span className="truncate">{selected ? selected.label : placeholder}</span>
+        </span>
+        <ChevronDown className="select-chevron size-4" />
+      </button>
+      {open ? (
+        <ul role="listbox" className="select-menu" aria-label={ariaLabel}>
+          {options.map((option) => {
+            const OptionIcon = option.icon;
+            const isSelected = option.value === value;
+            return (
+              <li key={option.value}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  data-selected={isSelected ? "true" : undefined}
+                  onClick={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                  className="select-option"
+                >
+                  {option.color ? (
+                    <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: option.color }} />
+                  ) : null}
+                  {OptionIcon ? <OptionIcon className="size-4 shrink-0 text-[var(--gold)]" /> : null}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">{option.label}</span>
+                    {option.hint ? (
+                      <span className="mt-0.5 block truncate font-mono text-[11px] text-[var(--muted)]">{option.hint}</span>
+                    ) : null}
+                  </span>
+                  {isSelected ? <Check className="size-4 shrink-0 text-[var(--gold)]" /> : null}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 function TaskForm({
   input,
   categories,
@@ -2294,78 +2851,65 @@ function TaskForm({
     });
   }
 
+  const recommendationName =
+    categories.find((category) => category.id === recommendation.categoryId)?.name ?? "Domain";
+
   return (
-    <div className="grid gap-4">
-      <Field label="Mission title">
-        <input
-          value={input.title}
-          placeholder="Ship the portfolio update…"
-          onChange={(event) => updateWithAutomation({ ...input, title: event.target.value })}
-          className="field-input"
-        />
-      </Field>
-      <div className="rounded-md border border-[var(--line)] bg-[rgba(8,7,5,0.35)] p-3">
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--gold)]">Quick goal fills</p>
-          <p className="text-xs text-[var(--muted)]">
-            Suggested: {categories.find((category) => category.id === recommendation.categoryId)?.name ?? "Domain"} ·{" "}
-            {priorityLabel[recommendation.priority]} · {recommendation.xpValue} XP
-          </p>
+    <div className="mission-form">
+      <div className="mission-form__top grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <Field label="Mission title">
+          <input
+            value={input.title}
+            placeholder="Ship the portfolio update…"
+            onChange={(event) => updateWithAutomation({ ...input, title: event.target.value })}
+            className="field-input"
+          />
+        </Field>
+        <div className="rounded-lg border border-[var(--line)] bg-[rgba(8,7,5,0.4)] p-3 lg:p-4">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+            <div className="flex items-center gap-2">
+              <Sparkles className="size-3.5 shrink-0 text-[var(--gold)]" />
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--gold)]">Quick goal fills</p>
+            </div>
+            <p className="text-xs text-[var(--muted)]">
+              Suggested: {recommendationName} · {priorityLabel[recommendation.priority]} · {recommendation.xpValue} XP
+            </p>
+          </div>
+          <CustomSelect
+            value=""
+            placeholder={`Choose from ${goalSuggestions.length} preset examples…`}
+            ariaLabel="Choose a preset goal"
+            onChange={(value) => fillSuggestion(goalSuggestions[Number(value)])}
+            options={goalSuggestions.map((suggestion, index) => ({
+              value: String(index),
+              label: suggestion.title,
+              color: categories.find((category) => category.id === suggestion.categoryId)?.color,
+              hint: `${categories.find((category) => category.id === suggestion.categoryId)?.name ?? "Suggested"} · ${priorityLabel[suggestion.priority]} · ${suggestion.xpValue} XP`,
+            }))}
+          />
         </div>
-        <select
-          value=""
-          onChange={(event) => {
-            if (!event.target.value) {
-              return;
-            }
-            fillSuggestion(goalSuggestions[Number(event.target.value)]);
-          }}
-          className="field-input"
-          aria-label="Choose a preset goal"
-        >
-          <option value="">Choose from {goalSuggestions.length} preset examples…</option>
-          {goalSuggestions.map((suggestion, index) => (
-            <option key={`${suggestion.categoryId}-${suggestion.title}`} value={index}>
-              {suggestion.title} · {categories.find((category) => category.id === suggestion.categoryId)?.name ?? "Suggested"} ·{" "}
-              {priorityLabel[suggestion.priority]} · {suggestion.xpValue} XP
-            </option>
-          ))}
-        </select>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+
+      <div className="mission-form__meta grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Field label="Domain">
-          <select
+          <CustomSelect
             value={input.category_id}
-            onChange={(event) => onChange({ ...input, category_id: event.target.value })}
-            className="field-input"
-          >
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+            ariaLabel="Choose a domain"
+            onChange={(value) => onChange({ ...input, category_id: value })}
+            options={categories.map((category) => ({
+              value: category.id,
+              label: category.name,
+              color: category.color,
+              icon: categoryIcon(category.id),
+            }))}
+          />
         </Field>
-        <Field label="Stakes">
-          <select
-            value={input.priority}
-            onChange={(event) => onChange({ ...input, priority: event.target.value as Priority })}
-            className="field-input"
-          >
-            <option value="low">Skirmish</option>
-            <option value="medium">Mission</option>
-            <option value="high">Vanguard</option>
-            <option value="critical">Boss Fight</option>
-          </select>
-        </Field>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-3">
         <Field label="Due time">
           <input
             type="datetime-local"
             value={input.due_at}
             onChange={(event) => onChange({ ...input, due_at: event.target.value })}
-            className="field-input"
+            className="field-input field-input-datetime"
           />
         </Field>
         <Field label="Schedule date">
@@ -2373,7 +2917,7 @@ function TaskForm({
             type="date"
             value={input.scheduled_for}
             onChange={(event) => onChange({ ...input, scheduled_for: event.target.value })}
-            className="field-input"
+            className="field-input field-input-datetime"
           />
         </Field>
         <Field label="XP bounty">
@@ -2387,18 +2931,47 @@ function TaskForm({
           />
         </Field>
       </div>
-      <Field label="Notes">
-        <textarea
-          value={input.notes}
-          placeholder="The smallest visible step to victory…"
-          onChange={(event) => updateWithAutomation({ ...input, notes: event.target.value })}
-          rows={3}
-          className="field-input"
-        />
-      </Field>
-      <button onClick={onSubmit} className="btn-gold inline-flex items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-bold">
-        <Plus className="size-4" /> Inscribe Mission
-      </button>
+
+      <div className="grid gap-2 text-sm font-medium text-[var(--foreground)]">
+        <span className="font-mono text-xs uppercase tracking-[0.12em] text-[var(--muted)]">Stakes</span>
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          {(Object.keys(priorityLabel) as Priority[]).map((priority) => {
+            const active = input.priority === priority;
+            const color = priorityColor[priority];
+            return (
+              <button
+                key={priority}
+                type="button"
+                onClick={() => onChange({ ...input, priority })}
+                data-active={active ? "true" : undefined}
+                className="priority-pill"
+                style={active ? { borderColor: color, color, background: `${color}1f` } : undefined}
+              >
+                <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+                {priorityLabel[priority]}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mission-form__footer grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <Field label="Notes">
+          <textarea
+            value={input.notes}
+            placeholder="The smallest visible step to victory…"
+            onChange={(event) => updateWithAutomation({ ...input, notes: event.target.value })}
+            rows={2}
+            className="field-input"
+          />
+        </Field>
+        <button
+          onClick={onSubmit}
+          className="btn-gold inline-flex h-[2.75rem] items-center justify-center gap-2 self-end rounded-md px-6 text-sm font-bold lg:min-w-52"
+        >
+          <Plus className="size-4" /> Inscribe Mission
+        </button>
+      </div>
     </div>
   );
 }
@@ -2469,7 +3042,7 @@ function HabitForm({
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-[var(--foreground)]">
+    <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--foreground)]">
       <span className="font-mono text-xs uppercase tracking-[0.12em] text-[var(--muted)]">{label}</span>
       {children}
     </label>

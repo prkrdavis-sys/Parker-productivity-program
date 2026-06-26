@@ -211,56 +211,48 @@ a:active {
 
 /* ---------- Ornamental frame (corner brackets) ---------- */
 .frame {
+  --frame-corner-size: 16px;
+  --frame-corner-inset: 8px;
+  --frame-corner-weight: 2px;
+  --frame-corner-color: var(--gold);
+  --frame-corner-opacity: 0.8;
+
   position: relative;
   background: linear-gradient(180deg, rgba(34, 28, 18, 0.92), rgba(16, 13, 9, 0.92));
   border: 1px solid var(--line);
   min-width: 0;
 }
-.frame::before,
-.frame::after {
+.frame::before {
   content: "";
   position: absolute;
-  width: 18px;
-  height: 18px;
-  border-color: var(--gold);
+  inset: 0;
   pointer-events: none;
-  opacity: 0.85;
-}
-.frame::before {
-  top: 8px;
-  left: 8px;
-  border-top: 2px solid;
-  border-left: 2px solid;
-}
-.frame::after {
-  bottom: 8px;
-  right: 8px;
-  border-bottom: 2px solid;
-  border-right: 2px solid;
-}
-
-.frame-corners {
-  position: relative;
-}
-.frame-corners > .corner {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border-color: var(--gold);
-  opacity: 0.7;
-  pointer-events: none;
-}
-.frame-corners > .corner.tr {
-  top: 8px;
-  right: 8px;
-  border-top: 2px solid;
-  border-right: 2px solid;
-}
-.frame-corners > .corner.bl {
-  bottom: 8px;
-  left: 8px;
-  border-bottom: 2px solid;
-  border-left: 2px solid;
+  opacity: var(--frame-corner-opacity);
+  background:
+    linear-gradient(var(--frame-corner-color), var(--frame-corner-color))
+      var(--frame-corner-inset) var(--frame-corner-inset) / var(--frame-corner-size)
+      var(--frame-corner-weight) no-repeat,
+    linear-gradient(var(--frame-corner-color), var(--frame-corner-color))
+      var(--frame-corner-inset) var(--frame-corner-inset) / var(--frame-corner-weight)
+      var(--frame-corner-size) no-repeat,
+    linear-gradient(var(--frame-corner-color), var(--frame-corner-color))
+      calc(100% - var(--frame-corner-inset)) var(--frame-corner-inset) / var(--frame-corner-size)
+      var(--frame-corner-weight) no-repeat,
+    linear-gradient(var(--frame-corner-color), var(--frame-corner-color))
+      calc(100% - var(--frame-corner-inset)) var(--frame-corner-inset) / var(--frame-corner-weight)
+      var(--frame-corner-size) no-repeat,
+    linear-gradient(var(--frame-corner-color), var(--frame-corner-color))
+      var(--frame-corner-inset) calc(100% - var(--frame-corner-inset)) / var(--frame-corner-size)
+      var(--frame-corner-weight) no-repeat,
+    linear-gradient(var(--frame-corner-color), var(--frame-corner-color))
+      var(--frame-corner-inset) calc(100% - var(--frame-corner-inset)) / var(--frame-corner-weight)
+      var(--frame-corner-size) no-repeat,
+    linear-gradient(var(--frame-corner-color), var(--frame-corner-color))
+      calc(100% - var(--frame-corner-inset)) calc(100% - var(--frame-corner-inset)) / var(--frame-corner-size)
+      var(--frame-corner-weight) no-repeat,
+    linear-gradient(var(--frame-corner-color), var(--frame-corner-color))
+      calc(100% - var(--frame-corner-inset)) calc(100% - var(--frame-corner-inset)) / var(--frame-corner-weight)
+      var(--frame-corner-size) no-repeat;
 }
 
 /* ---------- Gold accents ---------- */
@@ -343,6 +335,151 @@ a:active {
 }
 .field-input::placeholder {
   color: var(--muted-2);
+}
+
+.field-input-datetime {
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  padding-inline: 0.65rem;
+}
+
+.field-input-datetime::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.65;
+  filter: invert(0.75) sepia(0.35) saturate(4) hue-rotate(5deg);
+}
+
+.field-input-datetime::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+}
+
+/* ---------- Custom select ---------- */
+.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: rgba(8, 7, 5, 0.7);
+  color: var(--foreground);
+  border-radius: 4px;
+  padding: 0.6rem 0.75rem;
+  min-height: 2.75rem;
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-body), serif;
+}
+.select-trigger:hover {
+  border-color: var(--line-strong);
+}
+.select-trigger[data-open="true"],
+.select-trigger:focus-visible {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(224, 178, 76, 0.3), inset 0 0 18px -10px var(--gold-glow);
+  outline: none;
+}
+.select-trigger[data-placeholder="true"] {
+  color: var(--muted-2);
+}
+.select-chevron {
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: transform 200ms ease, color 200ms ease;
+}
+.select-trigger[data-open="true"] .select-chevron {
+  transform: rotate(180deg);
+  color: var(--gold);
+}
+
+.select-menu {
+  position: absolute;
+  z-index: 50;
+  left: 0;
+  right: 0;
+  margin-top: 6px;
+  max-height: 17.5rem;
+  overflow-y: auto;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(34, 28, 18, 0.98), rgba(13, 11, 8, 0.98));
+  box-shadow:
+    0 24px 60px -20px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(0, 0, 0, 0.4),
+    0 0 28px -14px var(--gold-glow);
+  backdrop-filter: blur(8px);
+  animation: select-pop 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes select-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.select-option {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 0.55rem 0.6rem;
+  font-size: 0.9rem;
+  color: var(--foreground);
+  cursor: pointer;
+  font-family: var(--font-body), serif;
+}
+.select-option:hover,
+.select-option:focus-visible {
+  background: rgba(224, 178, 76, 0.1);
+  border-color: rgba(224, 178, 76, 0.25);
+  outline: none;
+}
+.select-option[data-selected="true"] {
+  color: var(--gold-bright);
+  background: rgba(224, 178, 76, 0.06);
+}
+
+/* ---------- Priority pills ---------- */
+.priority-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(8, 7, 5, 0.5);
+  color: var(--muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.priority-pill:hover {
+  border-color: var(--line-strong);
+  color: var(--foreground);
+}
+
+.mission-form {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .mission-form {
+    gap: 1.25rem;
+  }
 }
 
 /* ---------- Section eyebrow ---------- */
@@ -478,12 +615,11 @@ a:active {
     background: radial-gradient(140% 100% at 50% 0%, transparent 36%, rgba(5, 4, 3, 0.64) 100%);
   }
 
-  .frame::before,
-  .frame::after,
-  .frame-corners > .corner {
-    width: 10px;
-    height: 10px;
-    opacity: 0.55;
+  .frame {
+    --frame-corner-size: 12px;
+    --frame-corner-inset: 6px;
+    --frame-corner-weight: 2px;
+    --frame-corner-opacity: 0.8;
   }
 
   .eyebrow {
